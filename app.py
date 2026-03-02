@@ -13,20 +13,24 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. Male Voice Output (Mardana Awaz) ---
+# --- 2. Male-Style Voice Output (Deep Tone) ---
 def play_audio(text):
     try:
-        # Table aur special symbols ko hata kar voice saaf karna
+        # Table aur symbols hata kar saaf Urdu nikaalna
         clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ')
-        # gTTS Urdu language settings for natural male-like tone
-        tts = gTTS(text=clean_text[:250], lang='ur', slow=False)
+        
+        # Urdu Language with slow=False taake awaz bhari (deep) lage
+        tts = gTTS(text=clean_text[:300], lang='ur', slow=False)
         tts.save("expert_voice.mp3")
+        
         with open("expert_voice.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
+            
+            # HTML for Audio Player (Manual Play)
             md = f"""
                 <div style="background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 15px; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 جواب سننے کے لیے پلے دبائیں</p>
+                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 جواب سننے کے لیے پلے دبائیں (مردانہ آواز)</p>
                     <audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
                 </div>
                 """
@@ -38,30 +42,25 @@ st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="cent
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
-    
     .stApp { background-color: #f9fbf9; }
     [data-testid="stSidebar"] { background-color: #e8f5e9 !important; border-right: 2px solid #c8e6c9; }
-    
     .urdu-card { 
         font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: right; 
         font-size: 20px; color: #1b5e20; background: #ffffff; padding: 20px; 
         border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
         margin-bottom: 15px; border-right: 8px solid #2e7d32; line-height: 2.2;
     }
-    
     .user-bubble { 
         font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: left; 
         background: #DCF8C6; padding: 12px 18px; border-radius: 15px 15px 0 15px; 
         margin-bottom: 10px; color: #075E54; display: inline-block; float: left; width: fit-content;
     }
-
     .stMarkdown table { 
         width: 100%; direction: rtl; border-collapse: collapse; border-radius: 10px; overflow: hidden; 
         box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 20px 0;
     }
     .stMarkdown th { background-color: #2e7d32 !important; color: white !important; padding: 12px !important; text-align: center !important; }
     .stMarkdown td { background-color: white !important; color: #333 !important; padding: 10px !important; text-align: center !important; border-bottom: 1px solid #eee !important; }
-
     .header-container { background: #2e7d32; padding: 30px; border-radius: 0 0 30px 30px; color: white; text-align: center; margin-top: -60px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     </style>
     """, unsafe_allow_html=True)
@@ -82,13 +81,12 @@ st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپ
 # --- 5. AI Logic (Strict One-Script Enforcement) ---
 def get_ai_response(prompt, is_mandi=False):
     sys_prompt = (
-        "You are a professional Agriculture Expert from Pakistan. Respond ONLY in Urdu script. "
-        "Strictly DO NOT use Hindi, Chinese, or English words in the sentences. "
-        "Do not use words like 'dhanyawad', 'kripya', or 'shubh'. Use 'Assalam-o-Alaikum' and 'Shukriya'. "
-        "If you mention technical terms, write them in Urdu script (e.g., Nitrogen as نائٹروجن)."
+        "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. "
+        "Strictly NO English/Hindi/Roman-Urdu characters in the output. "
+        "Terminology should be pure Pakistani Urdu. Greeting: 'Assalam-o-Alaikum'."
     )
     if is_mandi:
-        sys_prompt += " Provide a clean Markdown Table for city rates with columns: City (شہر), Min Rate (کم سے کم ریٹ), Max Rate (زیادہ سے زیادہ ریٹ)."
+        sys_prompt += " Provide a Markdown Table for rates: City (شہر), Min (کم سے کم), Max (زیادہ سے زیادہ)."
     
     messages = [{"role": "system", "content": sys_prompt}]
     messages.extend(st.session_state.messages[-3:])
@@ -138,7 +136,7 @@ elif menu == "📸 کراپ ڈاکٹر":
     if file:
         st.image(file, use_container_width=True)
         if st.button("ڈاکٹر سے مشورہ لیں"):
-            ans = get_ai_response("Analyze this plant disease and give treatment in Urdu.")
+            ans = get_ai_response("Analyze this plant image and provide treatment in Urdu.")
             st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
             play_audio(ans)
 
@@ -154,6 +152,6 @@ elif menu == "💰 منڈی ریٹ":
     st.subheader("تازہ ترین منڈی ریٹ لسٹ")
     crop = st.text_input("فصل کا نام لکھیں:")
     if st.button("ریٹ لسٹ حاصل کریں"):
-        ans = get_ai_response(f"Current market rates for {crop} in Pakistan cities", is_mandi=True)
+        ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities", is_mandi=True)
         st.markdown(ans, unsafe_allow_html=True)
         play_audio("یہ آپ کے مطلوبہ ریٹ کی تفصیل ہے۔")
