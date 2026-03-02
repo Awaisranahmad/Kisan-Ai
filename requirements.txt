@@ -1,5 +1,6 @@
-groq
 streamlit
+groq
+edge-tts
 gTTS
 Pillow
 streamlit-mic-recorder
