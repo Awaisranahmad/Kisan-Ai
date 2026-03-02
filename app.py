@@ -2,31 +2,31 @@ import streamlit as st
 from groq import Groq
 from gtts import gTTS
 from PIL import Image
-import os
 import base64
+from streamlit_mic_recorder import mic_recorder # Nayi Library
 
 # --- 1. Groq Setup ---
 try:
     if "GROQ_API_KEY" in st.secrets:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
     else:
-        st.error("❌ Groq API Key missing in Secrets!")
+        st.error("❌ API Key missing!")
         st.stop()
 except Exception as e:
     st.error(f"❌ Connection Error: {e}")
     st.stop()
 
-# --- 2. Voice Function ---
-def play_audio(text, lang_code='ur'):
+# --- 2. Voice Output Function (AI Bol Kar Bataye) ---
+def play_audio(text):
     try:
-        tts = gTTS(text=text, lang=lang_code)
+        tts = gTTS(text=text, lang='ur')
         tts.save("response.mp3")
         with open("response.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
             md = f"""
-                <div style="text-align: center; margin-top: 10px;">
-                    <audio controls autoplay="true" style="width: 80%;">
+                <div style="text-align: center;">
+                    <audio controls autoplay="true" style="width: 100%;">
                     <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
                     </audio>
                 </div>
@@ -35,136 +35,99 @@ def play_audio(text, lang_code='ur'):
     except:
         pass
 
-# --- 3. UI Styling (Green & White Theme + Urdu Font) ---
+# --- 3. UI Styling (Green & White Theme) ---
 st.set_page_config(page_title="Kisan Dost AI", page_icon="🚜", layout="wide")
 
 st.markdown("""
     <style>
-    /* Google Font for Urdu */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
-    
-    .main { background-color: #ffffff; }
-    
     .urdu-font {
         font-family: 'Noto Nastaliq Urdu', serif;
         direction: rtl;
         text-align: right;
-        font-size: 22px;
+        font-size: 24px;
         color: #1b5e20;
-        line-height: 2.2;
+        line-height: 2.5;
     }
-    
-    /* Sidebar Green Theme */
-    [data-testid="stSidebar"] {
-        background-color: #2e7d32;
-        color: white;
-    }
-    [data-testid="stSidebar"] * {
-        color: white !important;
-    }
-    
-    /* Buttons */
     .stButton>button {
         background-color: #2e7d32;
         color: white;
-        border-radius: 25px;
-        border: 2px solid #1b5e20;
+        border-radius: 20px;
         font-weight: bold;
-        transition: 0.3s;
     }
-    .stButton>button:hover {
-        background-color: #ffffff;
-        color: #2e7d32;
-    }
-    
-    /* Header Bar */
-    .header-bar {
-        background-color: #2e7d32;
-        padding: 20px;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-        margin-bottom: 20px;
-    }
+    [data-testid="stSidebar"] { background-color: #1b5e20; }
+    .header-box { background-color: #2e7d32; padding: 15px; border-radius: 10px; color: white; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. Sidebar Options ---
+# --- 4. Sidebar ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2316/2316334.png", width=100)
-    st.header("⚙️ ترتیبات (Settings)")
-    
-    # Language Selection (Urdu, Siraiki, English)
-    lang_choice = st.selectbox(
-        "اپنی زبان منتخب کریں (Select Language):",
-        ["Urdu (اردو)", "Siraiki (سرائیکی)", "English"]
-    )
-    
-    menu = st.radio(
-        "آپ کیا کرنا چاہتے ہیں؟",
-        ["💬 کسان ایکسپرٹ (Chat)", "📸 فصل کا معائنہ (Crop Doctor)", "💰 منڈی کے ریٹ (Mandi)"]
-    )
-    st.divider()
-    st.write("Dost Kisan AI - v2.0")
+    st.title("🚜 ترتیبات (Settings)")
+    lang_choice = st.selectbox("Zaban / زبان:", ["Urdu (اردو)", "Siraiki (سرائیکی)", "English"])
+    menu = st.radio("Menu:", ["💬 کسان ایکسپرٹ (Chat)", "📸 فصل کا معائنہ", "💰 منڈی ریٹ"])
 
-# --- 5. Main Layout ---
-st.markdown("<div class='header-bar'><h1>🚜 کسان دوست AI اسسٹنٹ</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='header-box'><h1>🚜 کسان دوست AI اسسٹنٹ</h1></div>", unsafe_allow_html=True)
 
-# Helper for Logic
-def get_kisan_response(user_input, language):
-    system_prompt = f"""
-    You are a highly professional Agriculture Expert from Pakistan. 
-    Instructions:
-    1. If language is Urdu, reply ONLY in Urdu Script (ا ب ت). No Roman Urdu.
-    2. If language is Siraiki, reply in Siraiki using Urdu Script.
-    3. If language is English, reply in English.
-    4. NEVER use Hindi words like 'Shubh', 'Dhanyawad'. Use 'Assalam-o-Alaikum', 'Shukriya'.
-    5. Always provide links: Seeds (parc.gov.pk), Fertilizer (engrofertilizers.com).
-    6. Keep the tone respectful (Aap, Janab).
-    """
-    
+# --- AI Logic Helper ---
+def get_ai_response(text_input):
+    system_msg = f"You are a Pakistani Agri-Expert. Reply ONLY in {lang_choice} script. No Roman Urdu. Use 'Assalam-o-Alaikum'. Provide website links for seeds/fertilizers."
     completion = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Language: {language}. Question: {user_input}"}
-        ]
+        messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": text_input}]
     )
     return completion.choices[0].message.content
 
-# --- FEATURES ---
+# --- MAIN FEATURES ---
 
 if menu == "💬 کسان ایکسپرٹ (Chat)":
-    st.subheader("کسان ایکسپرٹ آپ کی مدد کے لیے تیار ہے")
-    u_input = st.text_input("اپنا سوال یہاں لکھیں:")
+    st.subheader("آپ اپنا سوال بول کر یا لکھ کر پوچھ سکتے ہیں")
     
-    if st.button("مشورہ لیں"):
-        if u_input:
-            with st.spinner("کیسان ایکسپرٹ سوچ رہا ہے..."):
-                res = get_kisan_response(u_input, lang_choice)
-                st.markdown(f"<div class='urdu-font'>{res}</div>", unsafe_allow_html=True)
-                play_audio(res)
-        else:
-            st.warning("براہ کرم پہلے کچھ لکھیں۔")
-
-elif menu == "📸 فصل کا معائنہ (Crop Doctor)":
-    st.subheader("فصل کی بیماری کی تشخیص")
-    img_file = st.file_uploader("پودے کی تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg"])
+    # --- VOICE INPUT SECTION ---
+    st.write("🎤 **بول کر سوال پوچھیں (Record Button دبائیں):**")
+    audio_data = mic_recorder(start_prompt="Record Start 🎤", stop_prompt="Stop & Send ⏹️", key='recorder')
     
-    if img_file:
-        st.image(img_file, width=300)
-        if st.button("ڈاکٹر سے چیک کروائیں"):
-            with st.spinner("کیسان ڈاکٹر تصویر کا معائنہ کر رہا ہے..."):
-                # Vision analysis simulated via Groq text expert for now
-                res = get_kisan_response("Analyze this crop disease from the picture provided by farmer.", lang_choice)
-                st.markdown(f"<div class='urdu-font'>{res}</div>", unsafe_allow_html=True)
-                play_audio(res)
+    user_text = st.text_input("✍️ **یا یہاں لکھیں:**")
 
-elif menu == "💰 منڈی کے ریٹ (Mandi)":
-    st.subheader("مارکیٹ اور منڈی کے تازہ ترین ریٹ")
-    crop = st.text_input("فصل کا نام لکھیں (مثلاً گندم، کپاس):")
-    if st.button("ریٹ چیک کریں"):
-        with st.spinner("مارکیٹ ایکسپرٹ ڈیٹا نکال رہا ہے..."):
-            res = get_kisan_response(f"Current market prices for {crop} in Pakistan cities.", lang_choice)
+    # Processing Input
+    final_input = ""
+    if audio_data:
+        # Voice to Text (Transcribe)
+        with st.spinner("آپ کی آواز کو سمجھا جا رہا ہے..."):
+            try:
+                # Groq Whisper model for Urdu/Punjabi voice to text
+                transcription = client.audio.transcriptions.create(
+                    file=("audio.wav", audio_data['bytes']),
+                    model="whisper-large-v3",
+                    language="ur"
+                )
+                final_input = transcription.text
+                st.info(f"آپ نے کہا: {final_input}")
+            except Exception as e:
+                st.error("Awaz samajhne mein masla hua.")
+
+    elif user_text:
+        final_input = user_text
+
+    if final_input:
+        with st.spinner("کیسان ایکسپرٹ جواب تیار کر رہا ہے..."):
+            res = get_ai_response(final_input)
             st.markdown(f"<div class='urdu-font'>{res}</div>", unsafe_allow_html=True)
             play_audio(res)
+
+elif menu == "📸 فصل کا معائنہ":
+    st.header("فصل کی تصویر بھیجیں")
+    file = st.file_uploader("Upload Image", type=["jpg","png"])
+    if file:
+        st.image(file, width=300)
+        if st.button("Check Karwein"):
+            res = get_ai_response("Analyze this crop image and give Urdu advice.")
+            st.markdown(f"<div class='urdu-font'>{res}</div>", unsafe_allow_html=True)
+            play_audio(res)
+
+elif menu == "💰 منڈی ریٹ":
+    st.header("منڈی کے تازہ ترین ریٹ")
+    crop = st.text_input("Fasal ka naam:")
+    if st.button("Check Rates"):
+        res = get_ai_response(f"Current mandi rates for {crop} in Pakistan.")
+        st.markdown(f"<div class='urdu-font'>{res}</div>", unsafe_allow_html=True)
+        play_audio(res)
