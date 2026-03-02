@@ -1,7 +1,9 @@
 import streamlit as st
 from groq import Groq
-from gtts import gTTS
+import asyncio
+import edge_tts
 import base64
+import os
 from streamlit_mic_recorder import mic_recorder
 from PIL import Image
 
@@ -13,29 +15,30 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. Male-Style Voice Output (Deep Tone) ---
+# --- 2. TRUE Male Voice Output (Microsoft Imran) ---
+async def generate_male_voice(text):
+    # 'ur-PK-ImranNeural' ek natural mardana awaz hai
+    VOICE = "ur-PK-ImranNeural" 
+    # Table symbols aur markdown hata kar text saaf karna
+    clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ').replace('*', ' ')
+    communicate = edge_tts.Communicate(clean_text[:300], VOICE)
+    await communicate.save("male_expert.mp3")
+
 def play_audio(text):
     try:
-        # Table aur symbols hata kar saaf Urdu nikaalna
-        clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ')
-        
-        # Urdu Language with slow=False taake awaz bhari (deep) lage
-        tts = gTTS(text=clean_text[:300], lang='ur', slow=False)
-        tts.save("expert_voice.mp3")
-        
-        with open("expert_voice.mp3", "rb") as f:
+        asyncio.run(generate_male_voice(text))
+        with open("male_expert.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
-            
-            # HTML for Audio Player (Manual Play)
             md = f"""
                 <div style="background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 15px; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 جواب سننے کے لیے پلے دبائیں (مردانہ آواز)</p>
+                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">👨🏻‍🌾 ماہر کیسان کی آواز سنیں (مردانہ)</p>
                     <audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
                 </div>
                 """
             st.markdown(md, unsafe_allow_html=True)
-    except: pass
+    except Exception as e:
+        st.error(f"Voice Error: {e}")
 
 # --- 3. UI Styling (Wahi Layout) ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
@@ -55,13 +58,7 @@ st.markdown("""
         background: #DCF8C6; padding: 12px 18px; border-radius: 15px 15px 0 15px; 
         margin-bottom: 10px; color: #075E54; display: inline-block; float: left; width: fit-content;
     }
-    .stMarkdown table { 
-        width: 100%; direction: rtl; border-collapse: collapse; border-radius: 10px; overflow: hidden; 
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 20px 0;
-    }
-    .stMarkdown th { background-color: #2e7d32 !important; color: white !important; padding: 12px !important; text-align: center !important; }
-    .stMarkdown td { background-color: white !important; color: #333 !important; padding: 10px !important; text-align: center !important; border-bottom: 1px solid #eee !important; }
-    .header-container { background: #2e7d32; padding: 30px; border-radius: 0 0 30px 30px; color: white; text-align: center; margin-top: -60px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .header-container { background: #2e7d32; padding: 30px; border-radius: 0 0 30px 30px; color: white; text-align: center; margin-top: -60px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -70,23 +67,17 @@ with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2316/2316334.png", width=80)
     st.title("کیسان مینو")
     menu = st.radio("آپشن منتخب کریں:", ["💬 چیٹ", "📸 کراپ ڈاکٹر", "🧪 کھاد ایڈوائزر", "💰 منڈی ریٹ"])
-    st.divider()
-    if st.button("🔄 نئی چیٹ شروع کریں"):
+    if st.button("🔄 نئی چیٹ"):
         st.session_state.messages = []
-        st.session_state.processed_id = None
         st.rerun()
 
-st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>آپ کی فصل، ہماری فکر</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>خالص اردو اور مردانہ آواز کے ساتھ</p></div>", unsafe_allow_html=True)
 
-# --- 5. AI Logic (Strict One-Script Enforcement) ---
+# --- 5. AI Logic (Strict Urdu) ---
 def get_ai_response(prompt, is_mandi=False):
-    sys_prompt = (
-        "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. "
-        "Strictly NO English/Hindi/Roman-Urdu characters in the output. "
-        "Terminology should be pure Pakistani Urdu. Greeting: 'Assalam-o-Alaikum'."
-    )
+    sys_prompt = "You are a professional Agri-Expert. Respond ONLY in Urdu script. NO Hindi/English words. Greeting: 'Assalam-o-Alaikum'."
     if is_mandi:
-        sys_prompt += " Provide a Markdown Table for rates: City (شہر), Min (کم سے کم), Max (زیادہ سے زیادہ)."
+        sys_prompt += " Provide a Markdown Table for rates."
     
     messages = [{"role": "system", "content": sys_prompt}]
     messages.extend(st.session_state.messages[-3:])
@@ -95,10 +86,9 @@ def get_ai_response(prompt, is_mandi=False):
     try:
         chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
         return chat.choices[0].message.content
-    except: return "نیٹ ورک کا مسئلہ ہے، دوبارہ کوشش کریں۔"
+    except: return "نیٹ ورک کا مسئلہ ہے۔"
 
 # --- 6. Navigation Logic ---
-
 if menu == "💬 چیٹ":
     for m in st.session_state.messages:
         if m["role"] == "user":
@@ -114,14 +104,13 @@ if menu == "💬 چیٹ":
     with c1:
         audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='chat_mic')
     with c2:
-        u_text = st.text_input("یہاں لکھیں...", key="u_input", label_visibility="collapsed")
+        u_text = st.text_input("یہاں لکھیں...", key="u_input")
         send = st.button("بھیجیں")
 
     q = ""
     if audio and audio.get('id') != st.session_state.processed_id:
         st.session_state.processed_id = audio.get('id')
-        with st.spinner("سن رہا ہوں..."):
-            q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
+        q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
     elif send and u_text: q = u_text
 
     if q:
@@ -132,26 +121,18 @@ if menu == "💬 چیٹ":
 
 elif menu == "📸 کراپ ڈاکٹر":
     st.subheader("فصل کی بیماری کا معائنہ")
-    file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg", "jfif"])
+    file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg"])
     if file:
         st.image(file, use_container_width=True)
-        if st.button("ڈاکٹر سے مشورہ لیں"):
+        if st.button("معائنہ کریں"):
             ans = get_ai_response("Analyze this plant image and provide treatment in Urdu.")
             st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
             play_audio(ans)
 
-elif menu == "🧪 کھاد ایڈوائزر":
-    st.subheader("کھاد کا بہترین استعمال")
-    q_khaad = st.text_input("اپنی فصل اور زمین کی قسم لکھیں:")
-    if st.button("مشورہ لیں"):
-        ans = get_ai_response(q_khaad)
-        st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
-        play_audio(ans)
-
 elif menu == "💰 منڈی ریٹ":
-    st.subheader("تازہ ترین منڈی ریٹ لسٹ")
+    st.subheader("تازہ ترین منڈی ریٹ")
     crop = st.text_input("فصل کا نام لکھیں:")
-    if st.button("ریٹ لسٹ حاصل کریں"):
+    if st.button("ریٹ لسٹ دیکھیں"):
         ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities", is_mandi=True)
-        st.markdown(ans, unsafe_allow_html=True)
+        st.markdown(ans)
         play_audio("یہ آپ کے مطلوبہ ریٹ کی تفصیل ہے۔")
