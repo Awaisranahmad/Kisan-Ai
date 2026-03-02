@@ -41,7 +41,7 @@ def process_image_to_b64(uploaded_file):
     image.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# --- 4. Premium UI Styling (Full Fix) ---
+# --- 4. Premium UI Styling ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 st.markdown("""
     <style>
@@ -59,7 +59,6 @@ st.markdown("""
         background: #DCF8C6; padding: 15px; border-radius: 15px 15px 0 15px; 
         margin-bottom: 10px; color: #075E54; display: inline-block; float: left;
     }
-    /* Mandi Table UI Fix */
     .stMarkdown table { width: 100%; direction: rtl; border-collapse: collapse; border-radius: 10px; overflow: hidden; margin: 20px 0; }
     .stMarkdown th { background-color: #2e7d32 !important; color: white !important; padding: 12px !important; text-align: center !important; }
     .stMarkdown td { background-color: white !important; color: #333 !important; padding: 10px !important; text-align: center !important; border-bottom: 1px solid #eee !important; }
@@ -85,9 +84,9 @@ def get_ai_response(prompt, image_b64=None, is_mandi=False, is_khaad=False):
     sys_prompt = "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. No Hindi/English."
     
     if is_mandi:
-        sys_prompt += " Provide a Markdown Table: City (شہر), Min (کم سے کم), Max (زیادہ سے زیادہ)."
+        sys_prompt += " Provide a Markdown Table: City (شہر), Unit (یونٹ - فی من/فی کلو), Min (کم سے کم ریٹ), Max (زیادہ سے زیادہ ریٹ). Always mention if the rate is per 40kg (mann) or per kg."
     if is_khaad:
-        sys_prompt += " Also include current estimated market rates for fertilizers (DAP, Urea, etc.) in Pakistan."
+        sys_prompt += " Provide details and a table for Fertilizer rates: Name (کھاد کا نام), Unit (یونٹ - فی بیگ), Price (ریٹ)."
 
     messages = [{"role": "system", "content": sys_prompt}]
     if image_b64:
@@ -144,16 +143,17 @@ elif menu == "📸 کراپ ڈاکٹر":
 
 elif menu == "🧪 کھاد ایڈوائزر":
     st.subheader("کھاد کا استعمال اور ریٹ")
-    q_khaad = st.text_input("فصل کا نام اور زمین کی تفصیل لکھیں:")
+    
+    q_khaad = st.text_input("فصل کا نام لکھیں:")
     if st.button("مشورہ اور ریٹ لیں"):
-        ans = get_ai_response(f"Best fertilizer for {q_khaad} and its current rates in Pakistan", is_khaad=True)
+        ans = get_ai_response(f"Fertilizer advice for {q_khaad} and current market prices per bag in Pakistan", is_khaad=True)
         st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
         play_audio(ans)
 
 elif menu == "💰 منڈی ریٹ":
     st.subheader("تازہ ترین ریٹ لسٹ")
-    crop = st.text_input("فصل کا نام:")
+    crop = st.text_input("فصل کا نام (مثلاً گندم، کپاس):")
     if st.button("ریٹ دیکھیں"):
-        ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities", is_mandi=True)
+        ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities with units", is_mandi=True)
         st.markdown(ans, unsafe_allow_html=True)
-        play_audio("یہ رہی ریٹ کی تفصیل")
+        play_audio("یہ رہی ریٹ کی تفصیل جس میں یونٹ بھی شامل ہیں۔")
