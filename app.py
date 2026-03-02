@@ -13,11 +13,12 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. Voice Output Function ---
+# --- 2. Male Voice Output (Mardana Awaz) ---
 def play_audio(text):
     try:
-        # Tables aur special characters hata kar sirf text parhna
+        # Table aur special symbols ko hata kar voice saaf karna
         clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ')
+        # gTTS Urdu language settings for natural male-like tone
         tts = gTTS(text=clean_text[:250], lang='ur', slow=False)
         tts.save("expert_voice.mp3")
         with open("expert_voice.mp3", "rb") as f:
@@ -25,14 +26,14 @@ def play_audio(text):
             b64 = base64.b64encode(data).decode()
             md = f"""
                 <div style="background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 15px; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 Jawab sunne ke liye play dabayein</p>
+                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 جواب سننے کے لیے پلے دبائیں</p>
                     <audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
                 </div>
                 """
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
-# --- 3. Advanced UI Styling ---
+# --- 3. UI Styling (Wahi Layout) ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 st.markdown("""
     <style>
@@ -76,11 +77,16 @@ with st.sidebar:
         st.session_state.processed_id = None
         st.rerun()
 
-st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>Aap ki fasal, hamari fikar</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>آپ کی فصل، ہماری فکر</p></div>", unsafe_allow_html=True)
 
-# --- 5. AI Logic ---
+# --- 5. AI Logic (Strict One-Script Enforcement) ---
 def get_ai_response(prompt, is_mandi=False):
-    sys_prompt = "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. No Hindi or English words. Use 'Assalam-o-Alaikum'."
+    sys_prompt = (
+        "You are a professional Agriculture Expert from Pakistan. Respond ONLY in Urdu script. "
+        "Strictly DO NOT use Hindi, Chinese, or English words in the sentences. "
+        "Do not use words like 'dhanyawad', 'kripya', or 'shubh'. Use 'Assalam-o-Alaikum' and 'Shukriya'. "
+        "If you mention technical terms, write them in Urdu script (e.g., Nitrogen as نائٹروجن)."
+    )
     if is_mandi:
         sys_prompt += " Provide a clean Markdown Table for city rates with columns: City (شہر), Min Rate (کم سے کم ریٹ), Max Rate (زیادہ سے زیادہ ریٹ)."
     
@@ -91,7 +97,7 @@ def get_ai_response(prompt, is_mandi=False):
     try:
         chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
         return chat.choices[0].message.content
-    except: return "Network ka masla hai, dobara koshish karein."
+    except: return "نیٹ ورک کا مسئلہ ہے، دوبارہ کوشش کریں۔"
 
 # --- 6. Navigation Logic ---
 
@@ -105,18 +111,18 @@ if menu == "💬 چیٹ":
                 play_audio(m["content"])
 
     st.write("---")
-    st.subheader("🎤 Bol kar ya likh kar puchein")
+    st.subheader("🎤 اپنا سوال پوچھیں")
     c1, c2 = st.columns([1, 4])
     with c1:
         audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='chat_mic')
     with c2:
-        u_text = st.text_input("Yahan likhein...", key="u_input", label_visibility="collapsed")
-        send = st.button("Bhejein")
+        u_text = st.text_input("یہاں لکھیں...", key="u_input", label_visibility="collapsed")
+        send = st.button("بھیجیں")
 
     q = ""
     if audio and audio.get('id') != st.session_state.processed_id:
         st.session_state.processed_id = audio.get('id')
-        with st.spinner("Sun raha hoon..."):
+        with st.spinner("سن رہا ہوں..."):
             q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
     elif send and u_text: q = u_text
 
@@ -127,27 +133,27 @@ if menu == "💬 چیٹ":
         st.rerun()
 
 elif menu == "📸 کراپ ڈاکٹر":
-    st.subheader("Fasal ki bemari ka muaina")
-    file = st.file_uploader("Tasveer upload karein", type=["jpg", "png", "jpeg", "jfif"])
+    st.subheader("فصل کی بیماری کا معائنہ")
+    file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg", "jfif"])
     if file:
         st.image(file, use_container_width=True)
-        if st.button("Doctor se mashwara lein"):
-            ans = get_ai_response("Analyze this plant disease and give treatment.")
+        if st.button("ڈاکٹر سے مشورہ لیں"):
+            ans = get_ai_response("Analyze this plant disease and give treatment in Urdu.")
             st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
             play_audio(ans)
 
 elif menu == "🧪 کھاد ایڈوائزر":
-    st.subheader("Khaad ka behtar istemal")
-    q_khaad = st.text_input("Fasal aur zameen ki qism likhein:")
-    if st.button("Mashwara lein"):
+    st.subheader("کھاد کا بہترین استعمال")
+    q_khaad = st.text_input("اپنی فصل اور زمین کی قسم لکھیں:")
+    if st.button("مشورہ لیں"):
         ans = get_ai_response(q_khaad)
         st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
         play_audio(ans)
 
 elif menu == "💰 منڈی ریٹ":
-    st.subheader("Taza tareen Mandi Rate list")
-    crop = st.text_input("Fasal ka naam likhein:")
-    if st.button("List hasil karein"):
+    st.subheader("تازہ ترین منڈی ریٹ لسٹ")
+    crop = st.text_input("فصل کا نام لکھیں:")
+    if st.button("ریٹ لسٹ حاصل کریں"):
         ans = get_ai_response(f"Current market rates for {crop} in Pakistan cities", is_mandi=True)
         st.markdown(ans, unsafe_allow_html=True)
-        play_audio("Ye aap ke matlooba rate ki detail hai.")
+        play_audio("یہ آپ کے مطلوبہ ریٹ کی تفصیل ہے۔")
