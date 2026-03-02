@@ -32,9 +32,16 @@ def play_audio(text):
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
-# --- 3. Image Processing for Vision ---
-def encode_image(image_file):
-    return base64.b64encode(image_file.read()).decode('utf-8')
+# --- 3. Image Handling (JFIF Support) ---
+def process_image_to_b64(uploaded_file):
+    # Uploaded file ko PIL Image mein convert karna (JFIF ko handle karne ke liye)
+    image = Image.open(uploaded_file)
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+    
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 # --- 4. UI Styling ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
@@ -55,12 +62,10 @@ st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپ
 
 # --- AI Logic ---
 def get_ai_response(prompt, image_b64=None):
-    # Agar image ho to Vision model use karein, warna normal
+    # Vision model for images, versatile for text
     model = "llama-3.2-11b-vision-preview" if image_b64 else "llama-3.3-70b-versatile"
     
-    messages = [
-        {"role": "system", "content": "You are a professional Agri-Expert. Respond ONLY in Urdu script. No Hindi/English."}
-    ]
+    messages = [{"role": "system", "content": "You are a professional Pakistani Agri-Expert. Respond ONLY in Urdu script. No Hindi/English."}]
     
     if image_b64:
         messages.append({
@@ -77,12 +82,11 @@ def get_ai_response(prompt, image_b64=None):
         chat = client.chat.completions.create(model=model, messages=messages)
         return chat.choices[0].message.content
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"معذرت، نیٹ ورک کا مسئلہ ہے: {str(e)}"
 
 # --- Pages ---
 if menu == "💬 چیٹ":
     st.subheader("🎤 اپنا سوال پوچھیں")
-    # (Chat logic same as before...)
     u_text = st.text_input("یہاں لکھیں...")
     if st.button("بھیجیں") and u_text:
         ans = get_ai_response(u_text)
@@ -92,20 +96,23 @@ if menu == "💬 چیٹ":
 elif menu == "📸 کراپ ڈاکٹر":
     st.subheader("فصل کی تصویر سے بیماری پہچانیں")
     
-    file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg"])
+    file = st.file_uploader("تصویر اپ لوڈ کریں (JFIF, JPG, PNG)", type=["jpg", "png", "jpeg", "jfif"])
     
     if file:
-        st.image(file, caption="آپ کی فصل", use_container_width=True)
-        if st.button("بیماری چیک کریں"):
+        st.image(file, caption="آپ کی اپ لوڈ کردہ تصویر", use_container_width=True)
+        if st.button("بیماری کی تشخیص کریں"):
             with st.spinner("AI تصویر کا معائنہ کر رہا ہے..."):
-                img_b64 = encode_image(file)
-                ans = get_ai_response("Analyze this crop image. Identify the disease and suggest organic and chemical treatments in Urdu.", image_b64=img_b64)
-                st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
-                play_audio(ans)
+                try:
+                    img_b64 = process_image_to_b64(file)
+                    ans = get_ai_response("Analyze this crop image. Identify the disease and give treatment in Urdu.", image_b64=img_b64)
+                    st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
+                    play_audio(ans)
+                except Exception as e:
+                    st.error("تصویر پراسیس کرنے میں مسئلہ ہوا ہے۔")
 
 elif menu == "💰 منڈی ریٹ":
     crop = st.text_input("فصل کا نام:")
     if st.button("ریٹ دیکھیں"):
-        ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities as a table.")
+        ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities as a table.", is_mandi=True)
         st.markdown(ans)
         play_audio(ans)
