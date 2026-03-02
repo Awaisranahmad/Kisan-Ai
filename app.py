@@ -4,23 +4,24 @@ from gtts import gTTS
 import base64
 from streamlit_mic_recorder import mic_recorder
 
-# --- 1. Setup ---
+# --- 1. Connection Setup ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
+# Initialize session states
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "last_speech" not in st.session_state:
-    st.session_state.last_speech = None
+if "processed_audio_id" not in st.session_state:
+    st.session_state.processed_audio_id = None
 
-# --- 2. Audio Play Function ---
+# --- 2. Audio Playback Function ---
 def play_audio(text):
     try:
         tts = gTTS(text=text, lang='ur')
         tts.save("res.mp3")
         with open("res.mp3", "rb") as f:
             data = f.read()
-            b64 = base64.b64encode(data).decode()
-            md = f'<audio controls autoplay style="width:100%"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+            b64 = base64.base64encode(data).decode()
+            md = f'<audio id="ai_audio" controls autoplay style="width:100%"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
@@ -39,60 +40,72 @@ with st.sidebar:
     st.title("🚜 کیسان دوست")
     if st.button("🔄 نئی چیٹ (New Chat)"):
         st.session_state.messages = []
-        st.session_state.last_speech = None
+        st.session_state.processed_audio_id = None
         st.rerun()
     lang = st.selectbox("Zaban", ["Urdu", "Siraiki", "English"])
 
-# --- 5. Main Logic ---
+# --- 5. Logic to ask AI ---
 def ask_kisan_ai(prompt):
+    # Avoid duplicate prompts
+    if not prompt: return
+    
     st.session_state.messages.append({"role": "user", "content": prompt})
-    context = [{"role": "system", "content": f"You are a Pakistani Agri-Expert. Reply in {lang} script. No Roman Urdu."}]
+    context = [{"role": "system", "content": f"You are a Pakistani Agri-Expert. Reply in {lang} script only. No Roman Urdu."}]
     context.extend(st.session_state.messages[-5:])
     
     with st.spinner("AI سوچ رہا ہے..."):
-        chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=context)
-        ans = chat.choices[0].message.content
-        st.session_state.messages.append({"role": "assistant", "content": ans})
+        try:
+            chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=context)
+            ans = chat.choices[0].message.content
+            st.session_state.messages.append({"role": "assistant", "content": ans})
+        except:
+            st.error("Connection error.")
     st.rerun()
 
-# Display Chat
+# --- 6. Display Chat History ---
 for m in st.session_state.messages:
     cls = "user" if m["role"] == "user" else "urdu"
     st.markdown(f"<div class='{cls}'>{m['content']}</div>", unsafe_allow_html=True)
 
+# Play audio ONLY for the latest assistant message
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
-    play_audio(st.session_state.messages[-1]["content"])
+    # Hum ek container use karenge taake audio baar baar load na ho
+    with st.container():
+        play_audio(st.session_state.messages[-1]["content"])
 
 st.divider()
 
-# --- 6. Input Section (Loop Fix) ---
+# --- 7. Input Section (FIXED VOID LOOP) ---
 st.write("### 🎤 بولیں یا لکھیں")
 cols = st.columns([1, 4])
 
 with cols[0]:
-    # Recording handle
-    audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='my_mic')
+    # Mic recorder returns an object with an 'id'
+    audio_output = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='kisan_mic')
 
 with cols[1]:
-    text_msg = st.text_input("Sawal Likhein...", label_visibility="collapsed")
+    text_msg = st.text_input("Sawal Likhein...", key="text_in", placeholder="Yahan likhein...")
     send_btn = st.button("Bhejein (Send)")
 
-# Check Voice Input
-if audio:
-    # Check if this is a NEW recording, not the old one
-    if audio['id'] != st.session_state.get('last_speech_id'):
-        st.session_state.last_speech_id = audio['id'] # Store unique ID to prevent loop
+# Handle Voice Input with ID verification
+if audio_output is not None:
+    # 'id' change hone par hi process karega
+    current_id = audio_output.get('id')
+    if current_id != st.session_state.processed_audio_id:
+        st.session_state.processed_audio_id = current_id # Mark as processed
+        
         with st.spinner("Awaz process ho rahi hai..."):
             try:
                 rec = client.audio.transcriptions.create(
-                    file=("audio.wav", audio['bytes']),
+                    file=("audio.wav", audio_output['bytes']),
                     model="whisper-large-v3",
                     language="ur"
                 )
-                if rec.text:
+                if rec.text.strip():
                     ask_kisan_ai(rec.text)
-            except: st.error("Mic error!")
+            except Exception as e:
+                st.error("Audio error.")
 
-# Check Text Input
+# Handle Text Input
 if send_btn and text_msg:
     ask_kisan_ai(text_msg)
