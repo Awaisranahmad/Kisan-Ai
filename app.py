@@ -5,7 +5,7 @@ import base64
 from streamlit_mic_recorder import mic_recorder
 from PIL import Image
 
-# --- 1. Setup ---
+# --- 1. Connection ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 if "messages" not in st.session_state:
@@ -13,9 +13,10 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. Voice Output (Manual Play) ---
+# --- 2. Male-Like Voice Output (Manual Play) ---
 def play_audio(text):
     try:
+        # 'ur' language with custom settings
         tts = gTTS(text=text, lang='ur', slow=False)
         tts.save("expert_voice.mp3")
         with open("expert_voice.mp3", "rb") as f:
@@ -23,7 +24,7 @@ def play_audio(text):
             b64 = base64.b64encode(data).decode()
             md = f"""
                 <div style="background: #f1f8e9; padding: 10px; border-radius: 10px; border: 1px solid #2e7d32; margin: 10px 0; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 5px;">🔊 آواز سننے کے لیے پلے بٹن دبائیں</p>
+                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 5px;">🔊 جواب سننے کے لیے پلے بٹن دبائیں (Mardana Awaz)</p>
                     <audio controls style="width: 100%;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
                 </div>
                 """
@@ -49,6 +50,7 @@ st.markdown("""
         margin-bottom: 10px; color: #2e7d32; border-left: 5px solid #2e7d32;
     }
     .header-box { background: #2e7d32; padding: 25px; border-radius: 0 0 25px 25px; color: white; text-align: center; margin-top: -65px; }
+    .link-style { color: #2e7d32; text-decoration: underline; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -56,8 +58,12 @@ st.markdown("""
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2316/2316334.png", width=70)
     st.title("کیسان مینو")
-    lang_choice = st.selectbox("زبان چنیں", ["Urdu (اردو)", "Siraiki (سرائیکی)", "English"])
+    lang_choice = st.selectbox("زبان", ["Urdu (اردو)", "Siraiki (سرائیکی)", "English"])
     menu = st.radio("آپشنز", ["💬 چیٹ", "📸 کراپ ڈاکٹر", "🧪 کھاد ایڈوائزر", "💰 منڈی ریٹ"])
+    st.write("---")
+    st.markdown("### 🔗 اہم لنکس")
+    st.markdown("[بیج کے ریٹ (PARC)](http://www.parc.gov.pk/)")
+    st.markdown("[کھاد کے ریٹ (Engro)](https://www.engrofertilizers.com/)")
     if st.button("🔄 نئی چیٹ"):
         st.session_state.messages = []
         st.session_state.processed_id = None
@@ -65,28 +71,26 @@ with st.sidebar:
 
 st.markdown("<div class='header-box'><h1>🚜 کسان دوست ایکسپرٹ</h1></div>", unsafe_allow_html=True)
 
-# --- 5. AI Logic (Strict One-Script Enforcement) ---
+# --- 5. AI Logic (Zero Tolerance for Non-Urdu) ---
 def get_ai_response(prompt):
-    # Strict prompt to eliminate non-Urdu characters
     sys_prompt = (
-        f"You are a professional Agriculture Expert from Pakistan. "
-        f"STRICTLY Respond ONLY in {lang_choice} script. "
-        "Do NOT use any English, Hindi, or Chinese characters. "
-        "Translate technical terms like 'elements', 'symptoms', or 'nitrogen' into their Urdu equivalents. "
-        "Your response must be 100% readable in Urdu font. "
-        "Greeting: 'Assalam-o-Alaikum'. Tone: Professional Farmer Consultant."
+        f"You are a professional Pakistani Agriculture Expert. Respond ONLY in {lang_choice} script. "
+        "Strictly DO NOT use any Hindi words (like 'dhanyawad', 'kripya', 'shubh'). "
+        "DO NOT use English alphabets in sentences. "
+        "Use pure Pakistani Urdu terminology. Example: Instead of 'elements', use 'ajza'. "
+        "Include links to 'parc.gov.pk' or 'engrofertilizers.com' if necessary."
     )
     
     messages = [{"role": "system", "content": sys_prompt}]
-    messages.extend(st.session_state.messages[-4:])
+    messages.extend(st.session_state.messages[-3:])
     messages.append({"role": "user", "content": prompt})
     
     try:
         chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
         return chat.choices[0].message.content
-    except: return "معذرت، نیٹ ورک کا مسئلہ ہے۔ براہ کرم دوبارہ کوشش کریں۔"
+    except: return "معذرت، نیٹ ورک کا مسئلہ ہے۔"
 
-# --- 6. Features Navigation ---
+# --- 6. Navigating Features ---
 
 if menu == "💬 چیٹ":
     for m in st.session_state.messages:
@@ -96,52 +100,50 @@ if menu == "💬 چیٹ":
             play_audio(m["content"])
 
     st.write("---")
-    st.subheader("🎤 اپنا نیا سوال پوچھیں")
+    st.subheader("🎤 اپنا سوال پوچھیں")
     c1, c2 = st.columns([1, 4])
     with c1:
-        audio_in = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='chat_mic')
+        audio_in = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='main_mic')
     with c2:
-        text_in = st.text_input("یہاں لکھیں...", label_visibility="collapsed", key="chat_input")
-        send_it = st.button("بھیجیں")
+        u_text = st.text_input("یہاں لکھیں...", key="text_in", label_visibility="collapsed")
+        send = st.button("بھیجیں")
 
-    user_q = ""
+    q = ""
     if audio_in and audio_in.get('id') != st.session_state.processed_id:
         st.session_state.processed_id = audio_in.get('id')
         trans = client.audio.transcriptions.create(file=("audio.wav", audio_in['bytes']), model="whisper-large-v3", language="ur")
-        user_q = trans.text
-    elif send_it and text_in:
-        user_q = text_in
+        q = trans.text
+    elif send and u_text:
+        q = u_text
 
-    if user_q:
-        ans = get_ai_response(user_q)
-        st.session_state.messages.append({"role": "user", "content": user_q})
+    if q:
+        ans = get_ai_response(q)
+        st.session_state.messages.append({"role": "user", "content": q})
         st.session_state.messages.append({"role": "assistant", "content": ans})
         st.rerun()
 
 elif menu == "📸 کراپ ڈاکٹر":
-    st.subheader("فصل کی بیماری چیک کریں")
+    st.subheader("فصل کا معائنہ")
     file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg", "jfif"])
     if file:
         st.image(file, use_container_width=True)
-        
         if st.button("ڈاکٹر سے مشورہ لیں"):
-            ans = get_ai_response("Analyze this plant disease and provide treatment.")
+            ans = get_ai_response("Analyze this plant image and provide cure in pure Urdu.")
             st.markdown(f"<div class='urdu-font'>{ans}</div>", unsafe_allow_html=True)
             play_audio(ans)
 
 elif menu == "🧪 کھاد ایڈوائزر":
     st.subheader("کھاد کا مشورہ")
-    q = st.text_input("فصل اور زمین کا حال لکھیں:")
-    
+    f_q = st.text_input("اپنی زمین کا حال لکھیں:")
     if st.button("پوچھیں"):
-        ans = get_ai_response(q)
+        ans = get_ai_response(f_q)
         st.markdown(f"<div class='urdu-font'>{ans}</div>", unsafe_allow_html=True)
         play_audio(ans)
 
 elif menu == "💰 منڈی ریٹ":
-    st.subheader("تازہ ترین منڈی ریٹ")
-    crop = st.text_input("فصل کا نام لکھیں:")
-    if st.button("ریٹ معلوم کریں"):
-        ans = get_ai_response(f"Current Mandi prices for {crop}")
+    st.subheader("منڈی ریٹ")
+    crop = st.text_input("فصل کا نام:")
+    if st.button("ریٹ دیکھیں"):
+        ans = get_ai_response(f"Mandi rates for {crop} in Pakistan.")
         st.markdown(f"<div class='urdu-font'>{ans}</div>", unsafe_allow_html=True)
         play_audio(ans)
