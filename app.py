@@ -1,128 +1,98 @@
 import streamlit as st
 from groq import Groq
 from gtts import gTTS
-from PIL import Image
 import base64
 from streamlit_mic_recorder import mic_recorder
 
-# --- 1. Groq & Session Setup ---
-try:
-    if "GROQ_API_KEY" in st.secrets:
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    else:
-        st.error("API Key missing!")
-        st.stop()
-except Exception as e:
-    st.stop()
+# --- 1. Setup ---
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# Session State for History
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "last_speech" not in st.session_state:
+    st.session_state.last_speech = None
 
-# --- 2. Voice Output Function ---
+# --- 2. Audio Play Function ---
 def play_audio(text):
     try:
         tts = gTTS(text=text, lang='ur')
-        tts.save("response.mp3")
-        with open("response.mp3", "rb") as f:
+        tts.save("res.mp3")
+        with open("res.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
-            md = f"""
-                <div style="background: #e8f5e9; padding: 10px; border-radius: 10px; border: 1px solid #2e7d32; margin: 10px 0; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 5px;">🔊 جواب سنیں</p>
-                    <audio controls autoplay style="width: 100%;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
-                </div>
-                """
+            md = f'<audio controls autoplay style="width:100%"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
-# --- 3. UI Styling (Clean Green) ---
-st.set_page_config(page_title="Kisan Dost Pro", page_icon="🌾")
+# --- 3. UI Styling ---
+st.set_page_config(page_title="Kisan AI", page_icon="🌾")
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
-    .urdu-text { font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: right; font-size: 20px; line-height: 2; color: #1b5e20; background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-right: 5px solid #2e7d32; }
-    .user-text { font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: left; background: #e1f5fe; padding: 10px; border-radius: 10px; margin-bottom: 10px; color: #01579b; border-left: 5px solid #0288d1; }
-    .stButton>button { width: 100%; border-radius: 20px; background-color: #2e7d32; color: white; border: none; font-weight: bold; }
-    .recording-text { color: #d32f2f; font-weight: bold; text-align: center; animation: blinker 1s linear infinite; }
-    @keyframes blinker { 50% { opacity: 0; } }
+    .urdu { font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: right; font-size: 20px; background: #f1f8e9; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-right: 5px solid #2e7d32; }
+    .user { font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: left; background: #e3f2fd; padding: 10px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #1565c0; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. Sidebar & New Chat ---
+# --- 4. Sidebar ---
 with st.sidebar:
-    st.header("🚜 کیسان دوست")
-    lang = st.selectbox("زبان چنیں", ["Urdu (اردو)", "Siraiki (سرائیکی)", "English"])
-    
-    st.write("---")
-    # NEW CHAT BUTTON
-    if st.button("🔄 نئی چیٹ شروع کریں (New Chat)"):
+    st.title("🚜 کیسان دوست")
+    if st.button("🔄 نئی چیٹ (New Chat)"):
         st.session_state.messages = []
+        st.session_state.last_speech = None
         st.rerun()
+    lang = st.selectbox("Zaban", ["Urdu", "Siraiki", "English"])
+
+# --- 5. Main Logic ---
+def ask_kisan_ai(prompt):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    context = [{"role": "system", "content": f"You are a Pakistani Agri-Expert. Reply in {lang} script. No Roman Urdu."}]
+    context.extend(st.session_state.messages[-5:])
     
-    menu = st.radio("مینو", ["💬 مشورہ", "📸 تصویر", "🧪 کھاد", "💰 منڈی"])
-    st.write("---")
-    st.caption("Pakistan Agriculture AI v2.5")
+    with st.spinner("AI سوچ رہا ہے..."):
+        chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=context)
+        ans = chat.choices[0].message.content
+        st.session_state.messages.append({"role": "assistant", "content": ans})
+    st.rerun()
 
-st.markdown("<h2 style='text-align: center; color: #2e7d32;'>🌾 کیسان دوست ایکسپرٹ</h2>", unsafe_allow_html=True)
+# Display Chat
+for m in st.session_state.messages:
+    cls = "user" if m["role"] == "user" else "urdu"
+    st.markdown(f"<div class='{cls}'>{m['content']}</div>", unsafe_allow_html=True)
 
-# --- 5. Logic Handling ---
-def process_input(user_text):
-    if user_text:
-        # Add user message to history
-        st.session_state.messages.append({"role": "user", "content": user_text})
-        
-        # Build context
-        context = [{"role": "system", "content": f"You are a helpful Agri-Expert in Pakistan. Reply in {lang} script only. No Roman. Use respectful tone."}]
-        for m in st.session_state.messages[-5:]: # Last 5 messages context
-            context.append(m)
-            
-        try:
-            with st.spinner("کیسان ایکسپرٹ جواب لکھ رہا ہے..."):
-                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=context)
-                ans = response.text if hasattr(response, 'text') else response.choices[0].message.content
-                st.session_state.messages.append({"role": "assistant", "content": ans})
-        except:
-            st.error("نیٹ ورک کا مسئلہ ہے۔ دوبارہ کوشش کریں۔")
-        st.rerun()
-
-# --- Display History First ---
-for msg in st.session_state.messages:
-    div_class = "user-text" if msg["role"] == "user" else "urdu-text"
-    st.markdown(f"<div class='{div_class}'>{msg['content']}</div>", unsafe_allow_html=True)
-
-# Audio play for last message only
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
     play_audio(st.session_state.messages[-1]["content"])
 
-st.write("---")
+st.divider()
 
-# --- Input Section ---
+# --- 6. Input Section (Loop Fix) ---
 st.write("### 🎤 بولیں یا لکھیں")
 cols = st.columns([1, 4])
 
 with cols[0]:
-    audio_data = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='main_mic')
+    # Recording handle
+    audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='my_mic')
 
 with cols[1]:
-    user_msg = st.text_input("", placeholder="یہاں اپنا سوال لکھیں...", label_visibility="collapsed")
+    text_msg = st.text_input("Sawal Likhein...", label_visibility="collapsed")
+    send_btn = st.button("Bhejein (Send)")
 
-# Handle Voice Input (Fixed Error handling)
-if audio_data and 'bytes' in audio_data:
-    try:
-        with st.spinner("آواز پروسیس ہو رہی ہے..."):
-            transcription = client.audio.transcriptions.create(
-                file=("audio.wav", audio_data['bytes']),
-                model="whisper-large-v3",
-                language="ur"
-            )
-            if transcription.text:
-                process_input(transcription.text)
-    except Exception as e:
-        # Silent error for cleaner UI
-        pass
+# Check Voice Input
+if audio:
+    # Check if this is a NEW recording, not the old one
+    if audio['id'] != st.session_state.get('last_speech_id'):
+        st.session_state.last_speech_id = audio['id'] # Store unique ID to prevent loop
+        with st.spinner("Awaz process ho rahi hai..."):
+            try:
+                rec = client.audio.transcriptions.create(
+                    file=("audio.wav", audio['bytes']),
+                    model="whisper-large-v3",
+                    language="ur"
+                )
+                if rec.text:
+                    ask_kisan_ai(rec.text)
+            except: st.error("Mic error!")
 
-# Handle Text Input
-if st.button("ارسال کریں (Send)"):
-    if user_msg:
-        process_input(user_msg)
+# Check Text Input
+if send_btn and text_msg:
+    ask_kisan_ai(text_msg)
