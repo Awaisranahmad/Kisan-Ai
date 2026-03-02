@@ -1,29 +1,19 @@
 import streamlit as st
-import google.generativeai as genai
-from PIL import Image
+from groq import Groq
 from gtts import gTTS
 import os
 import base64
 
-# --- 1. API Key Setup (Streamlit Secrets) ---
-def setup_ai():
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            api_key = st.secrets["GEMINI_API_KEY"]
-            genai.configure(api_key=api_key)
-            
-            # YAHAN CHANGE HAI: Hum model ko manually 'models/' prefix ke sath call kar rahe hain
-            # Ye 'NotFound' error ko fix karne ka standard tarika hai
-            model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
-            return model
-        else:
-            st.error("❌ API Key 'GEMINI_API_KEY' not found in Secrets!")
-            return None
-    except Exception as e:
-        st.error(f"❌ Connection Error: {e}")
-        return None
-
-model = setup_ai()
+# --- 1. Groq API Setup ---
+try:
+    if "GROQ_API_KEY" in st.secrets:
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    else:
+        st.error("❌ Groq API Key nahi mili!")
+        st.stop()
+except Exception as e:
+    st.error(f"❌ Connection Error: {e}")
+    st.stop()
 
 # --- 2. Audio Function ---
 def play_audio(text, lang='ur'):
@@ -40,47 +30,57 @@ def play_audio(text, lang='ur'):
                 """
             st.markdown(md, unsafe_allow_html=True)
     except:
-        pass
+        st.warning("Audio play nahi ho saki.")
 
 # --- 3. UI Design ---
-st.set_page_config(page_title="Kisan Dost AI", page_icon="🚜")
-st.title("🚜 Kisan Dost: AI Assistant")
+st.set_page_config(page_title="Kisan Dost AI (Groq)", page_icon="🚜")
+st.title("🚜 Kisan Dost: Fast AI Assistant")
 
+st.sidebar.title("Settings")
 lang_opt = st.sidebar.selectbox("Language / زبان", ["Urdu (اردو)", "Punjabi (پنجابی)", "English"])
-option = st.sidebar.radio("Menu", ["📸 Crop Doctor", "💬 Agri Chat", "💰 Mandi Rates"])
+option = st.sidebar.radio("Menu", ["💬 Agri Chat", "💰 Mandi Rates"])
 
 st.divider()
 
-# --- LOGIC HANDLING ---
-if model:
-    if option == "📸 Crop Doctor":
-        st.header("Crop Disease Identifier")
-        uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
-        if uploaded_file:
-            img = Image.open(uploaded_file)
-            st.image(img, use_container_width=True)
-            if st.button("Check Karein"):
-                with st.spinner("AI analysis..."):
-                    # Image input ke liye content list use karna zaroori hai
-                    response = model.generate_content(["Identify disease and cure in Urdu.", img])
-                    st.success(response.text)
-                    play_audio(response.text)
+# --- CHAT LOGIC ---
+if option == "💬 Agri Chat":
+    st.header("Agricultural Expert Advice")
+    user_query = st.text_input("Apna sawal likhein:")
+    
+    if st.button("Jawab Lein"):
+        if user_query:
+            with st.spinner("Groq AI soch raha hai..."):
+                # Groq Model Call
+                chat_completion = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": f"You are a helpful agriculture expert. Answer in simple {lang_opt}."
+                        },
+                        {
+                            "role": "user",
+                            "content": user_query,
+                        }
+                    ],
+                    model="llama-3.3-70b-versatile", # Groq ka sab se best model
+                )
+                jawab = chat_completion.choices[0].message.content
+                st.markdown(f"**AI:** {jawab}")
+                play_audio(jawab)
+        else:
+            st.warning("Pehle sawal likhein!")
 
-    elif option == "💬 Agri Chat":
-        st.header("Agri Advice")
-        user_query = st.text_input("Sawal likhein:")
-        if st.button("Puchein"):
-            if user_query:
-                with st.spinner("Thinking..."):
-                    # Yahan hum check kar rahe hain ke text query sahi ja rahi hai
-                    response = model.generate_content(f"Explain in simple {lang_opt}: {user_query}")
-                    st.write(response.text)
-                    play_audio(response.text)
+elif option == "💰 Mandi Rates":
+    st.header("Mandi Price Advisor")
+    crop = st.text_input("Fasal ka naam:")
+    if st.button("Check Rates"):
+        with st.spinner("Checking..."):
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": f"Tell current market price trends for {crop} in Pakistan in {lang_opt}"}],
+                model="llama-3.3-70b-versatile",
+            )
+            jawab = chat_completion.choices[0].message.content
+            st.info(jawab)
+            play_audio(jawab)
 
-    elif option == "💰 Mandi Rates":
-        st.header("Mandi Rates")
-        crop_name = st.text_input("Fasal:")
-        if st.button("Rates"):
-            response = model.generate_content(f"Mandi prices for {crop_name} in Pakistan in {lang_opt}")
-            st.info(response.text)
-            play_audio(response.text)
+st.sidebar.write("Powered by Groq Llama 3")
