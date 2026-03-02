@@ -3,11 +3,10 @@ from groq import Groq
 from gtts import gTTS
 import base64
 import io
-import os
 from streamlit_mic_recorder import mic_recorder
 from PIL import Image
 
-# --- 1. Connection & Session ---
+# --- 1. Connection Setup ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 if "messages" not in st.session_state:
@@ -15,7 +14,7 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. Voice Output (Audio Player) ---
+# --- 2. Voice Output ---
 def play_audio(text):
     try:
         clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ').replace('*', ' ')
@@ -42,7 +41,7 @@ def process_image_to_b64(uploaded_file):
     image.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# --- 4. Premium UI Styling (Wahi Purana Design) ---
+# --- 4. Premium UI Styling (Full Fix) ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 st.markdown("""
     <style>
@@ -60,6 +59,10 @@ st.markdown("""
         background: #DCF8C6; padding: 15px; border-radius: 15px 15px 0 15px; 
         margin-bottom: 10px; color: #075E54; display: inline-block; float: left;
     }
+    /* Mandi Table UI Fix */
+    .stMarkdown table { width: 100%; direction: rtl; border-collapse: collapse; border-radius: 10px; overflow: hidden; margin: 20px 0; }
+    .stMarkdown th { background-color: #2e7d32 !important; color: white !important; padding: 12px !important; text-align: center !important; }
+    .stMarkdown td { background-color: white !important; color: #333 !important; padding: 10px !important; text-align: center !important; border-bottom: 1px solid #eee !important; }
     .header-box { background: #2e7d32; padding: 35px; border-radius: 0 0 35px 35px; color: white; text-align: center; margin-top: -65px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
     </style>
     """, unsafe_allow_html=True)
@@ -74,15 +77,18 @@ with st.sidebar:
         st.session_state.processed_id = None
         st.rerun()
 
-st.markdown("<div class='header-box'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>خالص اردو اور مکمل رہنمائی</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='header-box'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>آپ کی فصل، ہماری فکر</p></div>", unsafe_allow_html=True)
 
-# --- 6. AI Logic (Stable Models) ---
-def get_ai_response(prompt, image_b64=None, is_mandi=False):
-    # Vision for images, Versatile for text
+# --- 6. AI Logic ---
+def get_ai_response(prompt, image_b64=None, is_mandi=False, is_khaad=False):
     model = "llama-3.2-11b-vision-preview" if image_b64 else "llama-3.3-70b-versatile"
-    sys_prompt = "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. No English/Hindi."
-    if is_mandi: sys_prompt += " Provide a clean Urdu table for rates."
+    sys_prompt = "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. No Hindi/English."
     
+    if is_mandi:
+        sys_prompt += " Provide a Markdown Table: City (شہر), Min (کم سے کم), Max (زیادہ سے زیادہ)."
+    if is_khaad:
+        sys_prompt += " Also include current estimated market rates for fertilizers (DAP, Urea, etc.) in Pakistan."
+
     messages = [{"role": "system", "content": sys_prompt}]
     if image_b64:
         messages.append({"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}]})
@@ -92,9 +98,9 @@ def get_ai_response(prompt, image_b64=None, is_mandi=False):
     try:
         chat = client.chat.completions.create(model=model, messages=messages)
         return chat.choices[0].message.content
-    except: return "معذرت، نیٹ ورک کا مسئلہ ہے۔ براہ کرم دوبارہ کوشش کریں۔"
+    except: return "معذرت، نیٹ ورک کا مسئلہ ہے۔"
 
-# --- 7. Features Logic ---
+# --- 7. Navigation ---
 
 if menu == "💬 چیٹ":
     for m in st.session_state.messages:
@@ -121,27 +127,33 @@ if menu == "💬 چیٹ":
         st.session_state.messages.append({"role": "user", "content": q})
         st.session_state.messages.append({"role": "assistant", "content": ans})
         st.rerun()
-
+    
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
         play_audio(st.session_state.messages[-1]["content"])
 
 elif menu == "📸 کراپ ڈاکٹر":
-    st.subheader("فصل کی بیماری کا معائنہ")
-    
+    st.subheader("بیماری کی تشخیص")
     file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg", "jfif"])
     if file:
         st.image(file, use_container_width=True)
-        if st.button("تشخیص کریں"):
-            with st.spinner("AI تصویر دیکھ رہا ہے..."):
-                img_b64 = process_image_to_b64(file)
-                ans = get_ai_response("Analyze this plant image. Identify crop and disease. Give treatment in Urdu.", image_b64=img_b64)
-                st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
-                play_audio(ans)
+        if st.button("معائنہ کریں"):
+            img_b64 = process_image_to_b64(file)
+            ans = get_ai_response("Identify disease and give treatment in Urdu.", image_b64=img_b64)
+            st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
+            play_audio(ans)
+
+elif menu == "🧪 کھاد ایڈوائزر":
+    st.subheader("کھاد کا استعمال اور ریٹ")
+    q_khaad = st.text_input("فصل کا نام اور زمین کی تفصیل لکھیں:")
+    if st.button("مشورہ اور ریٹ لیں"):
+        ans = get_ai_response(f"Best fertilizer for {q_khaad} and its current rates in Pakistan", is_khaad=True)
+        st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
+        play_audio(ans)
 
 elif menu == "💰 منڈی ریٹ":
     st.subheader("تازہ ترین ریٹ لسٹ")
     crop = st.text_input("فصل کا نام:")
     if st.button("ریٹ دیکھیں"):
-        ans = get_ai_response(f"Mandi rates for {crop} in Pakistan", is_mandi=True)
-        st.markdown(ans)
+        ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities", is_mandi=True)
+        st.markdown(ans, unsafe_allow_html=True)
         play_audio("یہ رہی ریٹ کی تفصیل")
