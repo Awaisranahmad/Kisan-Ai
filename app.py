@@ -5,7 +5,7 @@ import base64
 from streamlit_mic_recorder import mic_recorder
 from PIL import Image
 
-# --- 1. Connection & Session Setup ---
+# --- 1. Setup ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 if "messages" not in st.session_state:
@@ -13,67 +13,82 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. Voice Output Function (Manual Play) ---
+# --- 2. Male-Style Voice Output ---
 def play_audio(text):
     try:
-        # Table content ko voice mein ignore karne ke liye clean text
-        clean_text = text.split('|')[0] if '|' in text else text
-        tts = gTTS(text=clean_text, lang='ur', slow=False)
+        # Table symbols ko remove karna taake voice clear ho
+        clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ')
+        tts = gTTS(text=clean_text[:200], lang='ur', slow=False) # Pehle 200 words ka audio
         tts.save("expert_voice.mp3")
         with open("expert_voice.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
             md = f"""
-                <div style="background: #f1f8e9; padding: 10px; border-radius: 10px; border: 1px solid #2e7d32; margin: 10px 0; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 5px;">🔊 جواب سننے کے لیے پلے بٹن دبائیں</p>
-                    <audio controls style="width: 100%;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 15px; text-align: center;">
+                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 جواب سننے کے لیے پلے دبائیں</p>
+                    <audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
                 </div>
                 """
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
-# --- 3. UI Styling (Light Green Sidebar) ---
-st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜")
+# --- 3. Advanced UI Styling ---
+st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
-    [data-testid="stSidebar"] { background-color: #e8f5e9 !important; }
-    [data-testid="stSidebar"] * { color: #1b5e20 !important; }
-    .urdu-font { 
+    
+    /* Main Background & Sidebar */
+    .stApp { background-color: #f9fbf9; }
+    [data-testid="stSidebar"] { background-color: #e8f5e9 !important; border-right: 2px solid #c8e6c9; }
+    
+    /* Modern Urdu Card */
+    .urdu-card { 
         font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: right; 
-        font-size: 20px; color: #1b5e20; background: #ffffff; padding: 15px; 
-        border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
-        margin-bottom: 10px; border-right: 5px solid #2e7d32; 
+        font-size: 20px; color: #1b5e20; background: #ffffff; padding: 20px; 
+        border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        margin-bottom: 15px; border-right: 8px solid #2e7d32; line-height: 2.2;
     }
-    .user-msg { 
+    
+    /* User Message Style */
+    .user-bubble { 
         font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: left; 
-        background: #f1f8e9; padding: 10px; border-radius: 10px; 
-        margin-bottom: 5px; color: #2e7d32; border-left: 5px solid #2e7d32;
+        background: #DCF8C6; padding: 12px 18px; border-radius: 15px 15px 0 15px; 
+        margin-bottom: 10px; color: #075E54; display: inline-block; float: left; width: fit-content;
     }
-    .header-box { background: #2e7d32; padding: 20px; border-radius: 0 0 20px 20px; color: white; text-align: center; margin-top: -60px; }
+
+    /* Mandi Table Styling */
+    .stMarkdown table { 
+        width: 100%; direction: rtl; border-collapse: collapse; border-radius: 10px; overflow: hidden; 
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 20px 0;
+    }
+    .stMarkdown th { background-color: #2e7d32 !important; color: white !important; padding: 12px !important; text-align: center !important; }
+    .stMarkdown td { background-color: white !important; color: #333 !important; padding: 10px !important; text-align: center !important; border-bottom: 1px solid #eee !important; }
+
+    .header-container { background: #2e7d32; padding: 30px; border-radius: 0 0 30px 30px; color: white; text-align: center; margin-top: -60px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 4. Sidebar ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2316/2316334.png", width=70)
+    st.image("https://cdn-icons-png.flaticon.com/512/2316/2316334.png", width=80)
     st.title("کیسان مینو")
-    menu = st.radio("آپشنز منتخب کریں", ["💬 چیٹ", "📸 کراپ ڈاکٹر", "🧪 کھاد ایڈوائزر", "💰 منڈی ریٹ"])
-    st.write("---")
+    menu = st.radio("آپشن منتخب کریں:", ["💬 چیٹ", "📸 کراپ ڈاکٹر", "🧪 کھاد ایڈوائزر", "💰 منڈی ریٹ"])
+    st.divider()
     st.markdown("### 🔗 اہم لنکس")
-    st.markdown("[بیج ریٹ (PARC)](http://www.parc.gov.pk/)")
-    if st.button("🔄 نئی چیٹ (Clear)"):
+    st.info("[بیج کے ریٹ (PARC)](http://www.parc.gov.pk/)")
+    if st.button("🔄 نئی چیٹ شروع کریں"):
         st.session_state.messages = []
         st.session_state.processed_id = None
         st.rerun()
 
-st.markdown("<div class='header-box'><h1>🚜 کسان دوست ایکسپرٹ</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>آپ کی فصل، ہماری فکر</p></div>", unsafe_allow_html=True)
 
-# --- 5. AI Logic ---
+# --- 5. Logic ---
 def get_ai_response(prompt, is_mandi=False):
-    sys_prompt = "You are a Pakistani Agri-Expert. Respond ONLY in Urdu script. No Hindi/English words. Use 'Assalam-o-Alaikum'."
+    sys_prompt = "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. No Hindi words like 'dhanyawad' or 'kripya'. Use 'Assalam-o-Alaikum'."
     if is_mandi:
-        sys_prompt += " ALWAYS provide a table for city rates."
+        sys_prompt += " Provide a clean Markdown Table for city rates with columns: City (شہر), Min Rate (کم سے کم ریٹ), Max Rate (زیادہ سے زیادہ ریٹ). Use per 40kg (Mund) prices."
     
     messages = [{"role": "system", "content": sys_prompt}]
     messages.extend(st.session_state.messages[-3:])
@@ -82,31 +97,33 @@ def get_ai_response(prompt, is_mandi=False):
     try:
         chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
         return chat.choices[0].message.content
-    except: return "معذرت، نیٹ ورک کا مسئلہ ہے۔"
+    except: return "نیٹ ورک کا مسئلہ ہے، دوبارہ کوشش کریں۔"
 
-# --- 6. Navigation Logic (Fixed All Sections) ---
+# --- 6. Pages Logic ---
 
 if menu == "💬 چیٹ":
     for m in st.session_state.messages:
-        cls = "user-msg" if m["role"] == "user" else "urdu-font"
-        st.markdown(f"<div class='{cls}'>{m['content']}</div>", unsafe_allow_html=True)
-        if m["role"] == "assistant" and m == st.session_state.messages[-1]:
-            play_audio(m["content"])
+        if m["role"] == "user":
+            st.markdown(f"<div style='overflow: auto;'><div class='user-bubble'>{m['content']}</div></div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='urdu-card'>{m['content']}</div>", unsafe_allow_html=True)
+            if m == st.session_state.messages[-1]:
+                play_audio(m["content"])
 
     st.write("---")
-    st.subheader("🎤 اپنا سوال پوچھیں")
+    st.subheader("🎤 بول کر یا لکھ کر پوچھیں")
     c1, c2 = st.columns([1, 4])
     with c1:
-        audio_data = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='chat_mic')
+        audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='chat_mic')
     with c2:
-        u_text = st.text_input("سوال لکھیں...", key="chat_in")
-        send = st.button("بھیجیں")
+        u_text = st.text_input("یہاں لکھیں...", key="u_input", label_visibility="collapsed")
+        send = st.button("بھیجیں (Send)")
 
     q = ""
-    if audio_data and audio_data.get('id') != st.session_state.processed_id:
-        st.session_state.processed_id = audio_data.get('id')
-        trans = client.audio.transcriptions.create(file=("a.wav", audio_data['bytes']), model="whisper-large-v3", language="ur")
-        q = trans.text
+    if audio and audio.get('id') != st.session_state.processed_id:
+        st.session_state.processed_id = audio.get('id')
+        with st.spinner("سن رہا ہوں..."):
+            q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
     elif send and u_text: q = u_text
 
     if q:
@@ -116,27 +133,30 @@ if menu == "💬 چیٹ":
         st.rerun()
 
 elif menu == "📸 کراپ ڈاکٹر":
-    st.subheader("فصل کی بیماری چیک کریں")
-    file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg", "jfif"])
+    st.subheader("فصل کی بیماری کا معائنہ")
+    
+    file = st.file_uploader("تصویر اپ لوڈ کریں (JPG, PNG, JFIF)", type=["jpg", "png", "jpeg", "jfif"])
     if file:
-        st.image(file, use_container_width=True)
+        st.image(file, caption="آپ کی فصل کی تصویر", use_container_width=True)
         if st.button("ڈاکٹر سے مشورہ لیں"):
-            ans = get_ai_response("Analyze this plant disease image and give treatment in Urdu.")
-            st.markdown(f"<div class='urdu-font'>{ans}</div>", unsafe_allow_html=True)
+            ans = get_ai_response("Analyze this plant disease and give treatment.")
+            st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
             play_audio(ans)
 
 elif menu == "🧪 کھاد ایڈوائزر":
-    st.subheader("کھاد کا مشورہ")
-    f_q = st.text_input("اپنی فصل اور زمین کا حال لکھیں:")
-    if st.button("مشورہ لیں"):
-        ans = get_ai_response(f_q)
-        st.markdown(f"<div class='urdu-font'>{ans}</div>", unsafe_allow_html=True)
+    st.subheader("کھاد کا بہترین استعمال")
+    [Image showing bags of NPK fertilizer with labels for Nitrogen, Phosphorus, and Potassium]
+    q_khaad = st.text_input("اپنی فصل اور زمین کی قسم لکھیں:")
+    if st.button("مشورہ حاصل کریں"):
+        ans = get_ai_response(q_khaad)
+        st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
         play_audio(ans)
 
 elif menu == "💰 منڈی ریٹ":
-    st.subheader("تازہ ترین منڈی ریٹ (فی 40 کلو)")
-    crop = st.text_input("فصل کا نام لکھیں:")
-    if st.button("ریٹ لسٹ دیکھیں"):
-        ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan", is_mandi=True)
-        st.markdown(ans)
-        play_audio("یہ آپ کی مطلوبہ فصل کے تازہ ترین ریٹس ہیں۔")
+    st.subheader("تازہ ترین منڈی ریٹ لسٹ (فی 40 کلو)")
+    crop = st.text_input("فصل کا نام لکھیں (مثلاً گندم، کپاس، چاول):")
+    if st.button("ریٹ لسٹ حاصل کریں"):
+        with st.spinner("ریٹ تلاش کیے جا رہے ہیں..."):
+            ans = get_ai_response(f"Current market rates for {crop} in Pakistan cities", is_mandi=True)
+            st.markdown(ans, unsafe_allow_html=True)
+            play_audio("یہ آپ کے مطلوبہ ریٹ کی تفصیل ہے۔")
