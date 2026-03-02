@@ -7,7 +7,7 @@ import os
 from streamlit_mic_recorder import mic_recorder
 from PIL import Image
 
-# --- 1. Connection Setup ---
+# --- 1. Connection & Session ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 if "messages" not in st.session_state:
@@ -15,50 +15,60 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. TRUE Male Voice Output (Microsoft Imran) ---
+# --- 2. Stable Male Voice Logic ---
 async def generate_male_voice(text):
-    # 'ur-PK-ImranNeural' ek natural mardana awaz hai
-    VOICE = "ur-PK-ImranNeural" 
-    # Table symbols aur markdown hata kar text saaf karna
-    clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ').replace('*', ' ')
-    communicate = edge_tts.Communicate(clean_text[:300], VOICE)
+    VOICE = "ur-PK-ImranNeural"
+    # Text ko saaf karna taake audio error na aaye
+    clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ').replace('*', ' ').strip()
+    
+    if not clean_text:
+        return False
+        
+    communicate = edge_tts.Communicate(clean_text[:250], VOICE)
     await communicate.save("male_expert.mp3")
+    return True
 
 def play_audio(text):
     try:
-        asyncio.run(generate_male_voice(text))
-        with open("male_expert.mp3", "rb") as f:
-            data = f.read()
-            b64 = base64.b64encode(data).decode()
-            md = f"""
-                <div style="background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 15px; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">👨🏻‍🌾 ماہر کیسان کی آواز سنیں (مردانہ)</p>
-                    <audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
-                </div>
-                """
-            st.markdown(md, unsafe_allow_html=True)
+        # Purani file delete karna taake nayi sahi bane
+        if os.path.exists("male_expert.mp3"):
+            os.remove("male_expert.mp3")
+            
+        success = asyncio.run(generate_male_voice(text))
+        
+        if success and os.path.exists("male_expert.mp3"):
+            with open("male_expert.mp3", "rb") as f:
+                data = f.read()
+                b64 = base64.b64encode(data).decode()
+                md = f"""
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 15px; text-align: center;">
+                        <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">👨🏻‍🌾 ماہر کیسان کی آواز سنیں (مردانہ)</p>
+                        <audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
+                    </div>
+                    """
+                st.markdown(md, unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"Voice Error: {e}")
+        st.warning("Awaz generate karne mein masla hua, lekin aap jawab niche parh sakte hain.")
 
-# --- 3. UI Styling (Wahi Layout) ---
+# --- 3. Premium UI Styling ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
     .stApp { background-color: #f9fbf9; }
-    [data-testid="stSidebar"] { background-color: #e8f5e9 !important; border-right: 2px solid #c8e6c9; }
+    [data-testid="stSidebar"] { background-color: #e8f5e9 !important; }
     .urdu-card { 
         font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: right; 
-        font-size: 20px; color: #1b5e20; background: #ffffff; padding: 20px; 
+        font-size: 20px; color: #1b5e20; background: #ffffff; padding: 22px; 
         border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-        margin-bottom: 15px; border-right: 8px solid #2e7d32; line-height: 2.2;
+        margin-bottom: 15px; border-right: 8px solid #2e7d32; line-height: 2.3;
     }
     .user-bubble { 
         font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: left; 
         background: #DCF8C6; padding: 12px 18px; border-radius: 15px 15px 0 15px; 
-        margin-bottom: 10px; color: #075E54; display: inline-block; float: left; width: fit-content;
+        margin-bottom: 10px; color: #075E54; display: inline-block; float: left;
     }
-    .header-container { background: #2e7d32; padding: 30px; border-radius: 0 0 30px 30px; color: white; text-align: center; margin-top: -60px; }
+    .header-box { background: #2e7d32; padding: 25px; border-radius: 0 0 25px 25px; color: white; text-align: center; margin-top: -65px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -69,13 +79,14 @@ with st.sidebar:
     menu = st.radio("آپشن منتخب کریں:", ["💬 چیٹ", "📸 کراپ ڈاکٹر", "🧪 کھاد ایڈوائزر", "💰 منڈی ریٹ"])
     if st.button("🔄 نئی چیٹ"):
         st.session_state.messages = []
+        st.session_state.processed_id = None
         st.rerun()
 
-st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>خالص اردو اور مردانہ آواز کے ساتھ</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='header-box'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>خالص اردو اور مردانہ آواز</p></div>", unsafe_allow_html=True)
 
-# --- 5. AI Logic (Strict Urdu) ---
+# --- 5. AI Logic ---
 def get_ai_response(prompt, is_mandi=False):
-    sys_prompt = "You are a professional Agri-Expert. Respond ONLY in Urdu script. NO Hindi/English words. Greeting: 'Assalam-o-Alaikum'."
+    sys_prompt = "You are a professional Agri-Expert. Respond ONLY in Urdu script. NO Hindi/English/Roman words. Greeting: 'Assalam-o-Alaikum'."
     if is_mandi:
         sys_prompt += " Provide a Markdown Table for rates."
     
@@ -86,9 +97,9 @@ def get_ai_response(prompt, is_mandi=False):
     try:
         chat = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
         return chat.choices[0].message.content
-    except: return "نیٹ ورک کا مسئلہ ہے۔"
+    except: return "معذرت، نیٹ ورک کا مسئلہ ہے۔"
 
-# --- 6. Navigation Logic ---
+# --- 6. Features Navigation ---
 if menu == "💬 چیٹ":
     for m in st.session_state.messages:
         if m["role"] == "user":
@@ -104,13 +115,14 @@ if menu == "💬 چیٹ":
     with c1:
         audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='chat_mic')
     with c2:
-        u_text = st.text_input("یہاں لکھیں...", key="u_input")
+        u_text = st.text_input("یہاں لکھیں...", key="u_input", label_visibility="collapsed")
         send = st.button("بھیجیں")
 
     q = ""
     if audio and audio.get('id') != st.session_state.processed_id:
         st.session_state.processed_id = audio.get('id')
-        q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
+        with st.spinner("سن رہا ہوں..."):
+            q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
     elif send and u_text: q = u_text
 
     if q:
@@ -124,8 +136,8 @@ elif menu == "📸 کراپ ڈاکٹر":
     file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg"])
     if file:
         st.image(file, use_container_width=True)
-        if st.button("معائنہ کریں"):
-            ans = get_ai_response("Analyze this plant image and provide treatment in Urdu.")
+        if st.button("ڈاکٹر سے مشورہ لیں"):
+            ans = get_ai_response("Analyze this plant disease and provide treatment in Urdu.")
             st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
             play_audio(ans)
 
