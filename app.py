@@ -32,7 +32,7 @@ def play_audio(text):
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
-# --- 3. Image Handling (JFIF & Model Ready) ---
+# --- 3. Image Handling ---
 def process_image_to_b64(uploaded_file):
     image = Image.open(uploaded_file)
     if image.mode != "RGB":
@@ -58,10 +58,11 @@ with st.sidebar:
 
 st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1></div>", unsafe_allow_html=True)
 
-# --- AI Logic (Updated Model) ---
+# --- AI Logic (Updated to 90B Vision) ---
 def get_ai_response(prompt, image_b64=None):
-    # Naya Model: llama-3.2-11b-vision-instant
-    model = "llama-3.2-11b-vision-instant" if image_b64 else "llama-3.3-70b-versatile"
+    # Sab se behtar model jo vision support karta hai
+    vision_model = "llama-3.2-90b-vision-preview"
+    text_model = "llama-3.3-70b-versatile"
     
     messages = [{"role": "system", "content": "You are a professional Pakistani Agri-Expert. Respond ONLY in Urdu script. No Hindi/English."}]
     
@@ -73,8 +74,10 @@ def get_ai_response(prompt, image_b64=None):
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
             ]
         })
+        model = vision_model
     else:
         messages.append({"role": "user", "content": prompt})
+        model = text_model
     
     try:
         chat = client.chat.completions.create(model=model, messages=messages)
@@ -96,20 +99,19 @@ elif menu == "📸 کراپ ڈاکٹر":
     file = st.file_uploader("تصویر اپ لوڈ کریں (JFIF, JPG, PNG)", type=["jpg", "png", "jpeg", "jfif"])
     
     if file:
-        st.image(file, caption="آپ کی اپ لوڈ کردہ تصویر", use_container_width=True)
+        st.image(file, caption="آپ کی تصویر", use_container_width=True)
         if st.button("بیماری کی تشخیص کریں"):
             with st.spinner("AI تصویر کا معائنہ کر رہا ہے..."):
                 try:
                     img_b64 = process_image_to_b64(file)
-                    # Vision model ko image analyze karne ka prompt
-                    ans = get_ai_response("Please look at this plant image. Identify the crop, the disease, and suggest organic and chemical treatments in Urdu.", image_b64=img_b64)
+                    ans = get_ai_response("Analyze this plant image. Identify the crop, the disease, and give treatment in Urdu.", image_b64=img_b64)
                     st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
                     play_audio(ans)
                 except Exception as e:
-                    st.error(f"Error processing image: {str(e)}")
+                    st.error(f"Error: {str(e)}")
 
 elif menu == "💰 منڈی ریٹ":
-    crop = st.text_input("فصل کا نام:")
+    crop = st.text_input("فصل کا نام لکھیں:")
     if st.button("ریٹ دیکھیں"):
         ans = get_ai_response(f"Current Mandi rates for {crop} in Pakistan cities as a table.")
         st.markdown(ans)
