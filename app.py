@@ -13,13 +13,13 @@ if "messages" not in st.session_state:
 if "processed_id" not in st.session_state:
     st.session_state.processed_id = None
 
-# --- 2. Male-Style Voice Output (Deep Tone) ---
+# --- 2. Voice Output Output ---
 def play_audio(text):
     try:
         # Table aur symbols hata kar saaf Urdu nikaalna
         clean_text = text.replace('|', ' ').replace('-', ' ').replace('#', ' ')
         
-        # Urdu Language with slow=False taake awaz bhari (deep) lage
+        # Urdu Language settings
         tts = gTTS(text=clean_text[:300], lang='ur', slow=False)
         tts.save("expert_voice.mp3")
         
@@ -27,17 +27,17 @@ def play_audio(text):
             data = f.read()
             b64 = base64.b64encode(data).decode()
             
-            # HTML for Audio Player (Manual Play)
+            # HTML for Audio Player (Text 'Mardana' hata diya gaya hai)
             md = f"""
                 <div style="background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 15px; text-align: center;">
-                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 جواب سننے کے لیے پلے دبائیں (مردانہ آواز)</p>
+                    <p style="color: #2e7d32; font-weight: bold; margin-bottom: 8px;">🔊 جواب سننے کے لیے پلے دبائیں</p>
                     <audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
                 </div>
                 """
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
-# --- 3. UI Styling (Wahi Layout) ---
+# --- 3. UI Styling ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 st.markdown("""
     <style>
@@ -78,7 +78,7 @@ with st.sidebar:
 
 st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>آپ کی فصل، ہماری فکر</p></div>", unsafe_allow_html=True)
 
-# --- 5. AI Logic (Strict One-Script Enforcement) ---
+# --- 5. AI Logic ---
 def get_ai_response(prompt, is_mandi=False):
     sys_prompt = (
         "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. "
