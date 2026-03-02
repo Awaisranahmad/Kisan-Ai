@@ -3,6 +3,7 @@ from groq import Groq
 from gtts import gTTS
 import base64
 import io
+import os
 from streamlit_mic_recorder import mic_recorder
 from PIL import Image
 
@@ -37,17 +38,18 @@ def process_image_to_b64(uploaded_file):
     image = Image.open(uploaded_file)
     if image.mode != "RGB":
         image = image.convert("RGB")
+    # Image size kam karna taake model jaldi process kare
+    image.thumbnail((800, 800))
     buffered = io.BytesIO()
-    image.save(buffered, format="JPEG")
+    image.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# --- 4. UI Styling (Wahi Purana Design) ---
+# --- 4. UI Styling ---
 st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
     .stApp { background-color: #f9fbf9; }
-    [data-testid="stSidebar"] { background-color: #e8f5e9 !important; border-right: 2px solid #c8e6c9; }
     .urdu-card { 
         font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: right; 
         font-size: 20px; color: #1b5e20; background: #ffffff; padding: 20px; 
@@ -73,16 +75,19 @@ with st.sidebar:
         st.session_state.processed_id = None
         st.rerun()
 
-st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>آپ کی فصل، ہماری فکر</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='header-container'><h1>🚜 کسان دوست ایکسپرٹ</h1><p>خالص اردو اور مکمل رہنمائی</p></div>", unsafe_allow_html=True)
 
-# --- 6. AI Logic (New Llama 3.2 Vision Model) ---
+# --- 6. AI Logic (The Fix) ---
 def get_ai_response(prompt, image_b64=None, is_mandi=False):
-    # Llama 3.2 Vision model for images, 70B for pure text
-    model = "llama-3.2-11b-vision-preview" if image_b64 else "llama-3.3-70b-versatile"
+    # Try multiple models in case one fails
+    vision_models = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"]
+    text_model = "llama-3.3-70b-versatile"
     
-    sys_prompt = "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. No Hindi/English/Roman-Urdu."
-    if is_mandi:
-        sys_prompt += " Provide a clean Table with columns: City (شہر), Min (کم سے کم), Max (زیادہ سے زیادہ)."
+    sys_prompt = "You are a professional Agri-Expert from Pakistan. Respond ONLY in Urdu script. Strictly NO English/Hindi words."
+    if is_mandi: sys_prompt += " Provide a Markdown Table for rates."
+
+    # Decide which model to use
+    selected_model = vision_models[0] if image_b64 else text_model
     
     messages = [{"role": "system", "content": sys_prompt}]
     
@@ -96,22 +101,27 @@ def get_ai_response(prompt, image_b64=None, is_mandi=False):
         })
     else:
         messages.append({"role": "user", "content": prompt})
-    
+
     try:
-        chat = client.chat.completions.create(model=model, messages=messages)
+        chat = client.chat.completions.create(model=selected_model, messages=messages, timeout=20.0)
         return chat.choices[0].message.content
-    except:
-        return "معذرت، نیٹ ورک کا مسئلہ ہے یا ماڈل اپ ڈیٹ ہو رہا ہے۔"
+    except Exception as e:
+        # Fallback if first vision model fails
+        if image_b64:
+            try:
+                chat = client.chat.completions.create(model=vision_models[1], messages=messages)
+                return chat.choices[0].message.content
+            except: pass
+        return "معذرت، ابھی سرور پر بوجھ ہے یا انٹرنیٹ کا مسئلہ ہے۔ براہ کرم ایک بار دوبارہ کوشش کریں۔"
 
-# --- 7. Features Logic ---
-
+# --- 7. Navigation ---
 if menu == "💬 چیٹ":
     for m in st.session_state.messages:
         style = "user-bubble" if m["role"] == "user" else "urdu-card"
         st.markdown(f"<div class='{style}'>{m['content']}</div>", unsafe_allow_html=True)
 
     st.write("---")
-    st.subheader("🎤 بات کریں یا لکھیں")
+    st.subheader("🎤 اپنا سوال پوچھیں")
     c1, c2 = st.columns([1, 4])
     with c1:
         audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='chat_mic')
@@ -123,7 +133,9 @@ if menu == "💬 چیٹ":
     if audio and audio.get('id') != st.session_state.processed_id:
         st.session_state.processed_id = audio.get('id')
         with st.spinner("سن رہا ہوں..."):
-            q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
+            try:
+                q = client.audio.transcriptions.create(file=("a.wav", audio['bytes']), model="whisper-large-v3", language="ur").text
+            except: st.error("آواز پہچاننے میں مسئلہ ہوا۔")
     elif send and u_text: q = u_text
 
     if q:
@@ -136,15 +148,15 @@ if menu == "💬 چیٹ":
         play_audio(st.session_state.messages[-1]["content"])
 
 elif menu == "📸 کراپ ڈاکٹر":
-    st.subheader("بیماری کی تصویر بھیجیں")
+    st.subheader("بیماری کی تشخیص")
     
     file = st.file_uploader("تصویر اپ لوڈ کریں", type=["jpg", "png", "jpeg", "jfif"])
     if file:
         st.image(file, use_container_width=True)
-        if st.button("معائنہ کریں"):
+        if st.button("بیماری چیک کریں"):
             with st.spinner("AI معائنہ کر رہا ہے..."):
                 img_b64 = process_image_to_b64(file)
-                ans = get_ai_response("Analyze this plant disease and give treatment in Urdu.", image_b64=img_b64)
+                ans = get_ai_response("Analyze this plant image. Identify the crop, the disease, and give treatment in Urdu.", image_b64=img_b64)
                 st.markdown(f"<div class='urdu-card'>{ans}</div>", unsafe_allow_html=True)
                 play_audio(ans)
 
@@ -152,6 +164,6 @@ elif menu == "💰 منڈی ریٹ":
     st.subheader("تازہ ترین ریٹ")
     crop = st.text_input("فصل کا نام:")
     if st.button("ریٹ حاصل کریں"):
-        ans = get_ai_response(f"Mandi rates for {crop} in Pakistan cities as a table", is_mandi=True)
+        ans = get_ai_response(f"Mandi rates for {crop} in Pakistan as a table", is_mandi=True)
         st.markdown(ans)
         play_audio("یہ رہی ریٹ لسٹ")
