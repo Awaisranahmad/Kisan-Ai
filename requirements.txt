@@ -1,6 +1,6 @@
 streamlit
 groq
-edge-tts
-gTTS
-Pillow
+gtts
 streamlit-mic-recorder
+pillow
+fpdf
