@@ -74,13 +74,6 @@ def load_styles():
             color: var(--input-text) !important;
             border: 1px solid var(--input-border) !important;
         }
-        .stButton button, .stFormSubmitButton button {
-            background-color: var(--btn-bg) !important;
-            color: #ffffff !important;
-        }
-        .stButton button:hover {
-            background-color: var(--btn-hover) !important;
-        }
     }
 
     /* ══════════════════════════════════════
@@ -126,16 +119,37 @@ def load_styles():
         background-color: var(--accent-light) !important;
     }
 
-    /* Buttons – TEXT ALWAYS WHITE */
-    .stButton button, .stFormSubmitButton button {
-        background-color: var(--btn-bg) !important;
+    /* ══════════════════════════════════════
+       BUTTONS – TEXT FORCEFULLY WHITE
+    ══════════════════════════════════════ */
+    /* Target every kind of Streamlit button */
+    .stButton > button,
+    .stFormSubmitButton > button,
+    button[data-testid="baseButton-primary"],
+    button[data-testid="baseButton-secondary"],
+    button[kind="primary"],
+    button[kind="secondary"] {
         color: #ffffff !important;
+        background-color: var(--btn-bg) !important;
         border: none !important;
         border-radius: 10px !important;
         font-weight: bold !important;
     }
-    .stButton button:hover {
+    .stButton > button:hover,
+    .stFormSubmitButton > button:hover,
+    button[data-testid="baseButton-primary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover,
+    button[kind="primary"]:hover,
+    button[kind="secondary"]:hover {
         background-color: var(--btn-hover) !important;
+        color: #ffffff !important;
+    }
+    .stButton > button:focus,
+    .stFormSubmitButton > button:focus,
+    button[data-testid="baseButton-primary"]:focus,
+    button[data-testid="baseButton-secondary"]:focus {
+        color: #ffffff !important;
+        outline: none !important;
     }
 
     /* Radio buttons */
@@ -147,27 +161,15 @@ def load_styles():
         padding: 8px 16px !important;
     }
 
-   /* Buttons – TEXT ALWAYS WHITE, no green */
-.stButton > button,
-.stFormSubmitButton > button,
-button[kind="primary"] {
-    color: #ffffff !important;
-    background-color: var(--btn-bg) !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: bold !important;
-}
-.stButton > button:hover,
-.stFormSubmitButton > button:hover,
-button[kind="primary"]:hover {
-    background-color: var(--btn-hover) !important;
-    color: #ffffff !important;
-}
-.stButton > button:focus,
-.stFormSubmitButton > button:focus {
-    color: #ffffff !important;
-    outline: none !important;
-}
+    /* Expander */
+    .stExpander {
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important;
+    }
+    .stExpander p, .stExpander span {
+        color: var(--text-primary) !important;
+    }
 
     /* Download button */
     .stDownloadButton button {
@@ -242,19 +244,19 @@ button[kind="primary"]:hover {
         text-align: center !important;
         border-bottom: 1px solid var(--border) !important;
     }
+
+    /* ══════════════════════════════════════
+       HEADER BOX – ALWAYS GREEN, WHITE TEXT
+    ══════════════════════════════════════ */
     .header-box {
-        background: var(--header-bg);
+        background: #2e7d32;
         padding: 35px;
         border-radius: 0 0 35px 35px;
-        color: var(--header-text);
+        color: #ffffff;
         text-align: center;
         margin-top: -65px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-
-    /* ══════════════════════════════════════
-       HEADER TEXT ALWAYS WHITE
-    ══════════════════════════════════════ */
     .header-box h1,
     .header-box p {
         color: #ffffff !important;
