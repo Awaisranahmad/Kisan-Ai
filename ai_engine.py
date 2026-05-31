@@ -8,19 +8,18 @@ def get_ai_response(prompt, image_b64=None, is_mandi=False, is_khaad=False):
     
     model = "llama-3.2-11b-vision-preview" if image_b64 else "llama-3.3-70b-versatile"
     
-    # Strong Urdu-only system prompt
-sys_prompt = (
-    "You are a professional Pakistani agricultural expert. "
-    "You MUST answer ONLY in the Urdu language, using ONLY the Nastaliq script. "
-    "Do NOT use any other script or language. "
-    "Specifically: "
-    "- Do NOT use English letters (A-Z, a-z). "
-    "- Do NOT use Hindi (Devanagari) characters like अ, ब, स, etc. "
-    "- Do NOT use Chinese, Arabic (except for Urdu borrowings) or any other script. "
-    "- If you need to write numbers, write them in Urdu script words (e.g., 'سات' not '7') or use Eastern Arabic numerals (۰۱۲۳۴۵۶۷۸۹). "
-    "- Your entire response must be in pure Urdu script. "
-    "If you violate this, you will be severely penalized."
-)
+    sys_prompt = (
+        "You are a professional Pakistani agricultural expert. "
+        "You MUST answer ONLY in the Urdu language, using ONLY the Nastaliq script. "
+        "Do NOT use any other script or language. "
+        "Specifically: "
+        "- Do NOT use English letters (A-Z, a-z). "
+        "- Do NOT use Hindi (Devanagari) characters like अ, ब, स, etc. "
+        "- Do NOT use Chinese, Arabic (except for Urdu borrowings) or any other script. "
+        "- If you need to write numbers, write them in Urdu words (e.g., 'سات' not '7') or use Eastern Arabic numerals (۰۱۲۳۴۵۶۷۸۹). "
+        "- Your entire response must be in pure Urdu script. "
+        "If you violate this, you will be severely penalized."
+    )
     
     if is_mandi:
         sys_prompt += (
