@@ -52,7 +52,7 @@ def load_styles():
             --bubble-user-bg: #2e7d32;
             --bubble-user-text: #e8f5e9;
             --header-bg: #1b5e20;
-            --header-text: #e8f5e9;
+            --header-text: #ffffff;
             --input-bg: #2a2a2a;
             --input-border: #4caf50;
             --input-text: #e8f5e9;
@@ -60,7 +60,6 @@ def load_styles():
             --btn-hover: #388e3c;
             --btn-text: #ffffff;
         }
-        /* Ensure Streamlit's own elements get our dark variables */
         .stApp, body, [data-testid="stAppViewContainer"] {
             background-color: var(--bg-primary) !important;
             color: var(--text-primary) !important;
@@ -77,7 +76,7 @@ def load_styles():
         }
         .stButton button, .stFormSubmitButton button {
             background-color: var(--btn-bg) !important;
-            color: var(--btn-text) !important;
+            color: #ffffff !important;
         }
         .stButton button:hover {
             background-color: var(--btn-hover) !important;
@@ -127,10 +126,10 @@ def load_styles():
         background-color: var(--accent-light) !important;
     }
 
-    /* Buttons */
+    /* Buttons – TEXT ALWAYS WHITE */
     .stButton button, .stFormSubmitButton button {
         background-color: var(--btn-bg) !important;
-        color: var(--btn-text) !important;
+        color: #ffffff !important;
         border: none !important;
         border-radius: 10px !important;
         font-weight: bold !important;
@@ -197,7 +196,6 @@ def load_styles():
         max-width: 80%;
     }
     .assistant-bubble {
-        /* optional, but agar use ho to */
         font-family: 'Noto Nastaliq Urdu', serif;
         direction: rtl;
         text-align: right;
@@ -232,30 +230,27 @@ def load_styles():
         text-align: center !important;
         border-bottom: 1px solid var(--border) !important;
     }
-  /* ══════════════════════════════════════
-   HEADER BOX – ALWAYS GREEN WITH WHITE TEXT
-══════════════════════════════════════ */
-.header-box {
-    background: #2e7d32;                     /* hamesha green */
-    padding: 35px;
-    border-radius: 0 0 35px 35px;
-    color: #ffffff;                         /* text white */
-    text-align: center;
-    margin-top: -65px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-/* Ensure heading and paragraph inside header stay white */
-.header-box h1,
-.header-box p {
-    color: #ffffff !important;
-}
-
-/* Mobile responsive */
-@media (max-width: 600px) {
     .header-box {
-        padding: 20px;
+        background: var(--header-bg);
+        padding: 35px;
+        border-radius: 0 0 35px 35px;
+        color: var(--header-text);
+        text-align: center;
+        margin-top: -65px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-}
+
+    /* ══════════════════════════════════════
+       HEADER TEXT ALWAYS WHITE
+    ══════════════════════════════════════ */
+    .header-box h1,
+    .header-box p {
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 600px) {
+        .urdu-card, .user-bubble, .assistant-bubble { font-size: 16px; padding: 15px; }
+        .header-box { padding: 20px; }
+    }
     </style>
     """, unsafe_allow_html=True)
