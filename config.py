@@ -13,8 +13,7 @@ def get_groq_client():
     return None
 
 # ---------- Language Setup ----------
-if "lang" not in st.session_state:
-    st.session_state.lang = "ur"
+# ⚠️ Yeh line HATAO: if "lang" not in st.session_state...
 
 TEXTS = {
     "ur": {
@@ -69,4 +68,6 @@ TEXTS = {
 
 def t(key):
     """Translate function"""
-    return TEXTS.get(st.session_state.lang, TEXTS["ur"]).get(key, key)
+    # ✅ Ab safe .get() use karo, default "ur"
+    lang = st.session_state.get("lang", "ur")
+    return TEXTS.get(lang, TEXTS["ur"]).get(key, key)
