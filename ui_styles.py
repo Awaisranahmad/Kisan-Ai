@@ -147,15 +147,27 @@ def load_styles():
         padding: 8px 16px !important;
     }
 
-    /* Expander */
-    .stExpander {
-        background: var(--bg-secondary) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 12px !important;
-    }
-    .stExpander p, .stExpander span {
-        color: var(--text-primary) !important;
-    }
+   /* Buttons – TEXT ALWAYS WHITE, no green */
+.stButton > button,
+.stFormSubmitButton > button,
+button[kind="primary"] {
+    color: #ffffff !important;
+    background-color: var(--btn-bg) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: bold !important;
+}
+.stButton > button:hover,
+.stFormSubmitButton > button:hover,
+button[kind="primary"]:hover {
+    background-color: var(--btn-hover) !important;
+    color: #ffffff !important;
+}
+.stButton > button:focus,
+.stFormSubmitButton > button:focus {
+    color: #ffffff !important;
+    outline: none !important;
+}
 
     /* Download button */
     .stDownloadButton button {
