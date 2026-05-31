@@ -1,9 +1,7 @@
 import streamlit as st
 from groq import Groq
 
-# ---------- API Setup ----------
 def get_groq_client():
-    """Secrets se key le, nahi to user session key se"""
     api_key = st.secrets.get("GROQ_API_KEY", "")
     if api_key:
         return Groq(api_key=api_key)
@@ -12,9 +10,7 @@ def get_groq_client():
         return Groq(api_key=user_key)
     return None
 
-# ---------- Language Setup ----------
-# ⚠️ Yeh line HATAO: if "lang" not in st.session_state...
-
+# Language texts (UNCHANGED)
 TEXTS = {
     "ur": {
         "title": "کیسان ایکسپرٹ پرو",
@@ -67,7 +63,5 @@ TEXTS = {
 }
 
 def t(key):
-    """Translate function"""
-    # ✅ Ab safe .get() use karo, default "ur"
-    lang = st.session_state.get("lang", "ur")
+    lang = st.session_state.get("lang", "ur")  # safe access
     return TEXTS.get(lang, TEXTS["ur"]).get(key, key)
