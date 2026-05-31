@@ -1,73 +1,73 @@
 import streamlit as st
-from groq import Groq
+from config import t, get_groq_client
+from ui_styles import load_styles
+from components.chat import render_chat
+from components.crop_doctor import render_crop_doctor
+from components.fertilizer import render_fertilizer
+from components.mandi import render_mandi
+from components.gallery import render_gallery
 
-# ---------- API Setup ----------
-def get_groq_client():
-    """Secrets se key le, nahi to user session key se"""
-    api_key = st.secrets.get("GROQ_API_KEY", "")
-    if api_key:
-        return Groq(api_key=api_key)
-    user_key = st.session_state.get("user_api_key", "")
-    if user_key:
-        return Groq(api_key=user_key)
-    return None
+st.set_page_config(page_title="Kisan Expert Pro", page_icon="🚜", layout="centered")
 
-# ---------- Language Setup ----------
-# ⚠️ Yeh line HATAO: if "lang" not in st.session_state...
+# ---------- Fix: pehle hi language set kar do ----------
+if "lang" not in st.session_state:
+    st.session_state.lang = "ur"
 
-TEXTS = {
-    "ur": {
-        "title": "کیسان ایکسپرٹ پرو",
-        "subtitle": "آپ کی فصل، ہماری فکر",
-        "menu": "کیسان مینو",
-        "chat": "💬 چیٹ",
-        "crop_doctor": "📸 کراپ ڈاکٹر",
-        "fertilizer": "🧪 کھاد ایڈوائزر",
-        "mandi": "💰 منڈی ریٹ",
-        "new_chat": "🔄 نئی چیٹ",
-        "api_title": "🔑 API سیٹنگز",
-        "enter_key": "اپنی GROQ API کی درج کریں:",
-        "use_own_key": "اپنی کی استعمال کریں",
-        "no_api": "API کی دستیاب نہیں۔",
-        "send": "بھیجیں",
-        "examine": "معائنہ کریں",
-        "upload": "تصویر اپ لوڈ کریں",
-        "camera": "تصویر کھینچیں",
-        "download_pdf": "📄 PDF ڈاؤن لوڈ",
-        "download_chat": "💾 چیٹ ڈاؤن لوڈ",
-        "gallery_title": "🖼️ فصل کی تصاویر",
-        "audio_prompt": "🔊 جواب سننے کے لیے پلے دبائیں",
-        "fertilizer_advice": "مشورہ اور ریٹ لیں",
-        "show_rate": "ریٹ دیکھیں",
-    },
-    "en": {
-        "title": "Kisan Expert Pro",
-        "subtitle": "Your Crop, Our Concern",
-        "menu": "Farmer Menu",
-        "chat": "💬 Chat",
-        "crop_doctor": "📸 Crop Doctor",
-        "fertilizer": "🧪 Fertilizer Advisor",
-        "mandi": "💰 Mandi Rates",
-        "new_chat": "🔄 New Chat",
-        "api_title": "🔑 API Settings",
-        "enter_key": "Enter your GROQ API Key:",
-        "use_own_key": "Use Own Key",
-        "no_api": "API key not available.",
-        "send": "Send",
-        "examine": "Examine",
-        "upload": "Upload Image",
-        "camera": "Take Photo",
-        "download_pdf": "📄 Download PDF",
-        "download_chat": "💾 Download Chat",
-        "gallery_title": "🖼️ Crop Gallery",
-        "audio_prompt": "🔊 Play to listen",
-        "fertilizer_advice": "Get Advice & Rates",
-        "show_rate": "Show Rates",
-    }
-}
+# ---------- Session State ----------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "crop_history" not in st.session_state:
+    st.session_state.crop_history = []
+if "fert_history" not in st.session_state:
+    st.session_state.fert_history = []
+if "mandi_history" not in st.session_state:
+    st.session_state.mandi_history = []
+if "user_api_key" not in st.session_state:
+    st.session_state.user_api_key = ""
+if "processed_id" not in st.session_state:
+    st.session_state.processed_id = None
 
-def t(key):
-    """Translate function"""
-    # ✅ Ab safe .get() use karo, default "ur"
-    lang = st.session_state.get("lang", "ur")
-    return TEXTS.get(lang, TEXTS["ur"]).get(key, key)
+# ---------- Load Styles ----------
+load_styles()
+
+# ---------- Sidebar ----------
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/2316/2316334.png", width=80)
+    st.title(t("menu"))
+
+    lang = st.selectbox("🌐 Language / زبان", ["ur", "en"], index=0)
+    if lang != st.session_state.lang:
+        st.session_state.lang = lang
+        st.rerun()
+
+    menu = st.radio(t("menu"), [t("chat"), t("crop_doctor"), t("fertilizer"), t("mandi")])
+
+    if st.button(t("new_chat")):
+        st.session_state.messages = []
+        st.session_state.processed_id = None
+        st.rerun()
+
+    with st.expander(t("api_title"), expanded=False):
+        key = st.text_input(t("enter_key"), type="password")
+        if st.button(t("use_own_key")):
+            st.session_state.user_api_key = key
+            st.success("Key updated! Reloading...")
+            st.rerun()
+        if not get_groq_client():
+            st.warning(t("no_api"))
+
+# ---------- Header ----------
+st.markdown(f"<div class='header-box'><h1>🚜 {t('title')}</h1><p>{t('subtitle')}</p></div>", unsafe_allow_html=True)
+
+# ---------- Routing ----------
+if menu == t("chat"):
+    render_chat()
+elif menu == t("crop_doctor"):
+    render_crop_doctor()
+elif menu == t("fertilizer"):
+    render_fertilizer()
+elif menu == t("mandi"):
+    render_mandi()
+
+# Gallery at bottom
+render_gallery()
