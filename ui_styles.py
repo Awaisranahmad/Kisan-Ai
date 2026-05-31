@@ -137,20 +137,21 @@ def load_styles():
     }
     .stButton > button:hover,
     .stFormSubmitButton > button:hover,
-    button[data-testid="baseButton-primary"]:hover,
-    button[data-testid="baseButton-secondary"]:hover,
-    button[kind="primary"]:hover,
-    button[kind="secondary"]:hover {
-        background-color: var(--btn-hover) !important;
-        color: #ffffff !important;
-    }
-    .stButton > button:focus,
-    .stFormSubmitButton > button:focus,
-    button[data-testid="baseButton-primary"]:focus,
-    button[data-testid="baseButton-secondary"]:focus {
-        color: #ffffff !important;
-        outline: none !important;
-    }
+button[data-testid="baseButton-primary"]:hover,
+button[data-testid="baseButton-secondary"]:hover,
+button[kind="primary"]:hover,
+button[kind="secondary"]:hover {
+    background-color: var(--btn-hover) !important;
+    color: #ffffff !important;
+}
+.stButton > button:focus,
+.stFormSubmitButton > button:focus,
+button[data-testid="baseButton-primary"]:focus,
+button[data-testid="baseButton-secondary"]:focus {
+    color: #ffffff !important;
+    outline: none !important;
+}
+
 
     /* Radio buttons */
     .stRadio div[role="radiogroup"] label {
