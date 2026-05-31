@@ -232,18 +232,30 @@ def load_styles():
         text-align: center !important;
         border-bottom: 1px solid var(--border) !important;
     }
+  /* ══════════════════════════════════════
+   HEADER BOX – ALWAYS GREEN WITH WHITE TEXT
+══════════════════════════════════════ */
+.header-box {
+    background: #2e7d32;                     /* hamesha green */
+    padding: 35px;
+    border-radius: 0 0 35px 35px;
+    color: #ffffff;                         /* text white */
+    text-align: center;
+    margin-top: -65px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Ensure heading and paragraph inside header stay white */
+.header-box h1,
+.header-box p {
+    color: #ffffff !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
     .header-box {
-        background: var(--header-bg);
-        padding: 35px;
-        border-radius: 0 0 35px 35px;
-        color: var(--header-text);
-        text-align: center;
-        margin-top: -65px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        padding: 20px;
     }
-    @media (max-width: 600px) {
-        .urdu-card, .user-bubble, .assistant-bubble { font-size: 16px; padding: 15px; }
-        .header-box { padding: 20px; }
-    }
+}
     </style>
     """, unsafe_allow_html=True)
