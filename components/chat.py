@@ -10,7 +10,7 @@ def render_chat():
         if m["role"] == "user":
             st.markdown(f"<div class='user-bubble'>{m['content']}</div>", unsafe_allow_html=True)
         else:
-            st.markdown(f"<div class='assistant-bubble'>{m['content']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='urdu-card'>{m['content']}</div>", unsafe_allow_html=True)
 
     st.write("---")
     st.subheader("🎤 اپنا سوال پوچھیں")
