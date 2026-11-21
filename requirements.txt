@@ -1,6 +1,11 @@
 streamlit
-groq
+openai>=1.0
 gtts
 streamlit-mic-recorder
 pillow
-fpdf
+fpdf2>=2.7
+arabic-reshaper>=3.0
+python-bidi>=0.6
+requests>=2.0
+beautifulsoup4>=4.0
+python-dotenv>=1.0
