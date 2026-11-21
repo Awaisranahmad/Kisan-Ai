@@ -1,0 +1,15 @@
+# Secrets — never commit real keys
+.streamlit/secrets.toml
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Runtime artifacts created by the app
+expert_voice.mp3
+*.pdf
+
+# Local dev / test caches
+.venv/
+.pytest_cache/
