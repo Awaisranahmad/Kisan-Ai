@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
-from config import t, get_groq_client
-from ai_engine import get_ai_response
+from config import t
+from ai_engine import get_ai_response, transcribe_audio
 from utils import play_audio, download_pdf_button
 
 def render_chat():
@@ -24,13 +24,7 @@ def render_chat():
     q = ""
     if audio and audio.get('id') != st.session_state.get("processed_id"):
         st.session_state.processed_id = audio.get('id')
-        client = get_groq_client()
-        if client:
-            q = client.audio.transcriptions.create(
-                file=("a.wav", audio['bytes']),
-                model="whisper-large-v3",
-                language="ur"
-            ).text
+        q = transcribe_audio(audio['bytes']) or ""
     elif send and u_text:
         q = u_text
 
