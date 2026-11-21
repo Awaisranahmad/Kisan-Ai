@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
-from config import t, get_groq_client
-from ai_engine import get_ai_response
+from config import t
+from ai_engine import get_ai_response, transcribe_audio
 from utils import play_audio, process_image_to_b64, download_pdf_button
 import base64
 
@@ -49,13 +49,8 @@ def render_crop_doctor():
                 # اگر آواز میں بھی کوئی سوال ہو
                 if audio_q and audio_q.get('id') != st.session_state.get("processed_id"):
                     st.session_state.processed_id = audio_q.get('id')
-                    client = get_groq_client()
-                    if client:
-                        voice_text = client.audio.transcriptions.create(
-                            file=("a.wav", audio_q['bytes']),
-                            model="whisper-large-v3",
-                            language="ur"
-                        ).text
+                    voice_text = transcribe_audio(audio_q['bytes'])
+                    if voice_text:
                         prompt += f" Voice query: {voice_text}"
                 ans = get_ai_response(prompt, image_b64=img_b64)
                 st.session_state.crop_history.append({"img_b64": img_b64, "response": ans})
