@@ -2,39 +2,30 @@
 
 **Empowering Farmers with AI-Driven Agricultural Solutions**
 
-Kisan AI is an intelligent agricultural assistance platform designed to support farmers with real-time insights, crop recommendations, disease detection, and market information. Leveraging advanced AI models and machine learning, this tool bridges the gap between modern technology and traditional farming.
+Kisan AI is an intelligent agricultural assistance platform designed to support Pakistani farmers with crop advice, disease detection from photos, fertilizer guidance, and mandi (market) rates — in Urdu, with voice input and audio answers. It runs as a Streamlit app backed by Groq's Llama models.
 
 ---
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Crop Advisory** – Get personalized recommendations for crop selection, planting schedules, and cultivation practices
-- 🌱 **Disease & Pest Detection** – Upload images to identify crop diseases and receive treatment suggestions
-- 💧 **Smart Irrigation Guidance** – Optimize water usage with weather-based irrigation recommendations
-- 📊 **Crop Yield Prediction** – AI-powered forecasts for expected yields based on historical data
-- 🛒 **Market Intelligence** – Real-time commodity prices and market trends
-- 🌤️ **Weather Integration** – Location-based weather forecasts and alerts
-- 💬 **Interactive Chat Support** – 24/7 agricultural expert assistant
-- 📱 **Mobile-Friendly UI** – Responsive design for farmers on the go
+- 🤖 **AI-Powered Crop Advisory** – Chat with an agricultural expert in Urdu (text or voice)
+- 🌱 **Disease Detection (Crop Doctor)** – Upload or photograph a crop; the AI checks its health and suggests treatment
+- 🧪 **Fertilizer Advisor** – Fertilizer advice and per-bag rates for a crop, soil type, and area
+- 💰 **Mandi Rates** – Current market rates for a crop across Pakistani cities
+- 🔊 **Voice In / Voice Out** – Ask by microphone (Whisper transcription) and listen to answers (gTTS audio)
+- 📄 **PDF / Text Download** – Save a diagnosis or chat as a file
+- 🌐 **Urdu / English UI** – Full Urdu interface with an English option
 
----
-
-## 🎯 Use Cases
-
-- **New Farmers** – Learn best practices and get guided recommendations
-- **Experienced Farmers** – Optimize yield and reduce costs with data-driven insights
-- **Agricultural Extension Workers** – Support village-level farming communities
-- **Agricultural Businesses** – Integrate AI insights into supply chain planning
+Planned (not built yet): smart irrigation guidance, yield prediction, weather integration.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend Framework** – Python
-- **AI/ML Engine** – LangChain, Groq (Llama models)
 - **Frontend** – Streamlit
-- **Database** – Python-based data structures (or PostgreSQL/MongoDB)
-- **APIs** – Weather APIs, Agricultural data sources
+- **AI** – Groq (Llama 3.3 70B for text, Llama 3.2 11B Vision for photos, Whisper Large v3 for voice)
+- **Audio** – gTTS, streamlit-mic-recorder
+- **PDF export** – fpdf2
 - **Language** – Python 3.10+
 
 ---
@@ -45,21 +36,21 @@ Kisan AI is an intelligent agricultural assistance platform designed to support 
 - Groq API key ([Get one for free](https://console.groq.com/))
 - Modern web browser
 
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
 ### Required Python Packages
 
 ```
 streamlit
-langchain-groq
-langchain-core
-python-dotenv
-requests
+groq
+gtts
+streamlit-mic-recorder
 pillow
-```
-
-Install dependencies:
-
-```bash
-pip install streamlit langchain-groq langchain-core python-dotenv requests pillow
+fpdf
 ```
 
 ---
@@ -73,19 +64,19 @@ git clone https://github.com/Awaisranahmad/Kisan-Ai.git
 cd Kisan-Ai
 ```
 
-### 2. Set Up Environment Variables
+### 2. Set Up Your API Key
 
-Create a `.streamlit/secrets.toml` file:
+Copy the example secrets file and put your own key in it:
+
+```bash
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+```
 
 ```toml
 GROQ_API_KEY = "your_groq_api_key_here"
 ```
 
-Or set an environment variable:
-
-```bash
-export GROQ_API_KEY="your_groq_api_key_here"
-```
+`secrets.toml` is git-ignored and must never be committed. You can also enter a key inside the app (sidebar → API Settings) without saving it to a file.
 
 ### 3. Run the Application
 
@@ -103,23 +94,36 @@ http://localhost:8501
 
 ---
 
+## 🧪 Tests
+
+Run the test suite (no API key needed):
+
+```bash
+pip install pytest
+python -m pytest tests/ -v
+```
+
+Tests cover image processing (`utils.process_image_to_b64`), graceful PDF/audio failure, the no-API-key guard in the AI engine, and a regression check that no real secrets file is tracked by git.
+
+---
+
 ## 💡 Usage Examples
 
 ### Get Crop Recommendations
 
-> **Farmer:** I want to grow crops in Maharashtra with monsoon season approaching. What should I plant?  
-> **Kisan AI:** [Provides region-specific, season-appropriate crop recommendations]
+> **Farmer:** I want to grow crops in Punjab with the Rabi season approaching. What should I plant?
+> **Kisan AI:** [Provides region-specific, season-appropriate crop recommendations in Urdu]
 
 ### Disease Detection
 
 1. Click the image upload button
 2. Take or upload a photo of your crop
-3. AI analyzes and provides disease identification and treatment options
+3. AI analyzes and provides disease identification and treatment options in Urdu
 
 ### Check Market Prices
 
-> **Farmer:** What's the current market price for wheat?  
-> **Kisan AI:** [Shows real-time commodity prices across major markets]
+> **Farmer:** What's the current mandi rate for wheat?
+> **Kisan AI:** [Shows a table of rates across Pakistani cities in Urdu]
 
 ---
 
@@ -127,28 +131,40 @@ http://localhost:8501
 
 ```
 Kisan-Ai/
-├── app.py                 # Main Streamlit application
-├── utils/
-│   ├── crop_advisor.py    # Crop recommendation logic
-│   ├── disease_detector.py # Disease detection module
-│   ├── market_data.py     # Market price integration
-│   └── weather.py         # Weather API integration
+├── app.py                  # Main Streamlit application (routing, sidebar)
+├── ai_engine.py            # Groq chat/vision calls + Urdu system prompt
+├── config.py               # Groq client setup + Urdu/English UI texts
+├── utils.py                # Image processing, audio playback, PDF export
+├── ui_styles.py            # CSS styling
+├── components/
+│   ├── chat.py             # AI chat screen
+│   ├── crop_doctor.py      # Photo-based crop diagnosis
+│   ├── fertilizer.py       # Fertilizer advice + rates
+│   ├── mandi.py            # Mandi rates
+│   └── gallery.py          # Crop photo gallery
 ├── data/
-│   ├── crops.json         # Crop database
-│   └── regions.json       # Region-specific data
-├── requirements.txt       # Python dependencies
+│   └── crop_encyclopedia.py # Crop reference data (currently unused by the app)
+├── tests/
+│   └── test_kisan.py       # Pytest suite
+├── requirements.txt        # Python dependencies
 └── .streamlit/
-    └── secrets.toml       # API keys (not in version control)
+    ├── secrets.toml.example # Template — copy to secrets.toml (never commit the real one)
+    └── secrets.toml        # Your real key (git-ignored, not in the repo)
 ```
 
 ---
 
 ## 🔒 Security & Privacy
 
-- **Secure API Keys** – Never hardcoded; stored in environment variables
-- **Data Privacy** – User data is not stored; only processed for insights
-- **Secure Communications** – HTTPS for all API calls
-- **Model Safety** – AI responses are validated before presentation
+- **API keys are never committed** – The key lives in `.streamlit/secrets.toml`, which is git-ignored; only a placeholder `.example` file is in the repo. The old tracked `secrets.toml` held only a placeholder value ("put your real key here"), never a real key — it was removed on 2026-11-21 so a real key can never be committed by accident.
+- **User data is not stored** – Chats and diagnoses live only in the browser session.
+- **AI output is rendered as text** – Model responses are shown in styled cards, not executed.
+
+---
+
+## 📝 Changelog
+
+- **2026-11-21 — Repo hygiene + tests:** removed the tracked `.streamlit/secrets.toml` (it held only a placeholder, never a real key) so a real key can never be committed by accident, added `.gitignore` + `secrets.toml.example`, added MIT `LICENSE`, added a pytest suite (`tests/test_kisan.py`, 9 tests), and corrected the README (requirements, project structure, features).
 
 ---
 
@@ -168,7 +184,7 @@ Please ensure all contributions follow the project's code standards and include 
 
 ## ⚠️ Disclaimer
 
-Kisan AI provides recommendations based on AI analysis. Always cross-reference critical farming decisions with local agricultural extension services or qualified agronomists.
+Kisan AI provides recommendations based on AI analysis. Always cross-reference critical farming decisions with local agricultural extension services or qualified agronomists. Mandi rates and fertilizer prices come from the AI model and may be outdated — verify before buying or selling.
 
 ---
 
@@ -182,7 +198,6 @@ This project is open-source and available under the [MIT License](LICENSE).
 
 For issues, questions, or suggestions:
 
-- 📧 **Email**: [Your contact email]
 - 🐛 **GitHub Issues**: [Open an issue](https://github.com/Awaisranahmad/Kisan-Ai/issues)
 - 💬 **Discussions**: [Start a discussion](https://github.com/Awaisranahmad/Kisan-Ai/discussions)
 
@@ -192,7 +207,6 @@ For issues, questions, or suggestions:
 
 - [Groq](https://groq.com/) for powerful LLM APIs
 - [Streamlit](https://streamlit.io/) for the amazing web framework
-- [LangChain](https://www.langchain.com/) for AI orchestration
 - Agricultural experts and farming communities for guidance
 
 ---
