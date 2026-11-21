@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
-from config import t, get_groq_client
-from ai_engine import get_ai_response
+from config import t
+from ai_engine import get_ai_response, transcribe_audio
 from utils import play_audio, download_pdf_button
 
 def render_fertilizer():
@@ -25,16 +25,11 @@ def render_fertilizer():
         with c1:
             audio_q = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='fert_mic')
         with c2:
+            voice_text = ""
             if audio_q and audio_q.get('id') != st.session_state.get("processed_id"):
                 st.session_state.processed_id = audio_q.get('id')
-                voice_text = ""
-                client = get_groq_client()
-                if client:
-                    voice_text = client.audio.transcriptions.create(
-                        file=("a.wav", audio_q['bytes']),
-                        model="whisper-large-v3",
-                        language="ur"
-                    ).text
+                voice_text = transcribe_audio(audio_q['bytes']) or ""
+                if voice_text:
                     st.write(f"آواز: {voice_text}")
         
         submitted = st.form_submit_button(t('fertilizer_advice'))
