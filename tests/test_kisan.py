@@ -364,3 +364,33 @@ def test_no_real_secrets_file_is_tracked():
         text=True,
     )
     assert r.stdout.strip() == "", "secrets.toml is still tracked by git"
+
+
+# --- data/crop_encyclopedia: the offline Fasal Guide -------------------------
+
+def test_crop_encyclopedia_lists_crops_and_fields():
+    from data.crop_encyclopedia import CROP_FIELDS, get_crop_info, list_crops
+
+    crops = list_crops()
+    assert len(crops) >= 6
+    assert "گندم" in crops and "کپاس" in crops and "چاول" in crops
+    for crop in crops:
+        info = get_crop_info(crop)
+        assert set(info) == set(CROP_FIELDS), crop
+        assert all(isinstance(v, str) and v.strip() for v in info.values()), crop
+
+
+def test_get_crop_info_unknown_crop_returns_empty():
+    from data.crop_encyclopedia import get_crop_info
+
+    assert get_crop_info("ایسی کوئی فصل نہیں") == {}
+    assert get_crop_info("") == {}
+
+
+def test_get_crop_info_returns_a_copy():
+    """Callers must not be able to mutate the shared encyclopedia."""
+    from data.crop_encyclopedia import get_crop_info
+
+    info = get_crop_info("گندم")
+    info["pest"] = "changed"
+    assert get_crop_info("گندم")["pest"] != "changed"
