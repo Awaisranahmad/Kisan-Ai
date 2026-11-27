@@ -10,6 +10,7 @@ Kisan AI is an intelligent agricultural assistance platform designed to support 
 
 - 🤖 **AI-Powered Crop Advisory** – Chat with an agricultural expert in Urdu (text or voice)
 - 🌱 **Disease Detection (Crop Doctor)** – Upload or photograph a crop; the AI checks its health and suggests treatment
+- 📖 **Fasal Guide (offline)** – Crop reference (common pests, watering, urea dose, season) for wheat, cotton, rice, maize, potato and sugarcane — works with no API key, inside Crop Doctor
 - 🧪 **Fertilizer Advisor** – Fertilizer advice and per-bag rates for a crop, soil type, and area
 - 💰 **Mandi Rates (LIVE)** – Real daily rates from Punjab AMIS (amis.pk), not AI guesses — with the source and date shown
 - 🔊 **Voice In / Voice Out** – Ask by microphone (Whisper transcription) and listen to answers (gTTS audio)
@@ -162,7 +163,7 @@ pip install pytest
 python -m pytest tests/ -v
 ```
 
-Tests cover image processing (`utils.process_image_to_b64`), PDF building with real Urdu text (font bundled, shaping correct), the model registry in `models.py`, AI fallback when a model is retired, plain error messages (wrong key / rate limit), voice transcription (never crashes), live mandi-rate parsing from AMIS Punjab (offline sample HTML), and a regression check that no real secrets file is tracked by git. 27 tests, no API key needed.
+Tests cover image processing (`utils.process_image_to_b64`), PDF building with real Urdu text (font bundled, shaping correct), the model registry in `models.py`, AI fallback when a model is retired, plain error messages (wrong key / rate limit), voice transcription (never crashes), live mandi-rate parsing from AMIS Punjab (offline sample HTML), the offline crop encyclopedia (`data.crop_encyclopedia` — every crop has all four fields, unknown crops return empty, callers can't mutate the shared data), and a regression check that no real secrets file is tracked by git. 30 tests, no API key needed.
 
 ---
 
@@ -204,12 +205,13 @@ Kisan-Ai/
 │   ├── mandi.py            # Mandi rates (live AMIS data first, labelled AI estimate as fallback)
 │   └── gallery.py          # Crop photo gallery
 ├── data/
-│   └── crop_encyclopedia.py # Crop reference data (currently unused by the app)
+│   ├── __init__.py           # Makes data/ an importable package
+│   └── crop_encyclopedia.py # Crop reference data for the offline Fasal Guide (Crop Doctor)
 ├── assets/
 │   └── fonts/
 │       └── NotoNaskhArabic.ttf # Bundled Urdu font for PDF export
 ├── tests/
-│   └── test_kisan.py       # Pytest suite (27 tests)
+│   └── test_kisan.py       # Pytest suite (30 tests)
 ├── requirements.txt        # Python dependencies
 ├── .env.example            # Template — copy to .env (never commit the real one)
 └── .streamlit/
@@ -228,6 +230,8 @@ Kisan-Ai/
 ---
 
 ## 📝 Changelog
+
+- **2026-11-27 — Fasal Guide (offline, no API key):** `data/crop_encyclopedia.py` was dead code — the README itself said it was unused by the app. It now powers a 📖 Fasal Guide inside Crop Doctor: pick a crop and instantly see its common pests, watering, urea dose and season, with no API key. Expanded from 3 to 6 crops (wheat, cotton, rice, maize, potato, sugarcane). `get_crop_info` now returns a copy so callers can't mutate the shared data. Tests grew to 30 (`tests/test_kisan.py`).
 
 - **2026-11-21 — Models, PDF, live mandi rates, any provider:** the old models were retired by Groq (`llama-3.2-11b-vision-preview` shut down 2025-04-14, `llama-3.3-70b-versatile` shut down 2026-08-16), so the app's AI had stopped working. All models now live in one new file, `models.py` — change only that file to switch models, and the app falls back automatically if a model is retired. Any OpenAI-compatible provider works (Groq, OpenAI, DeepSeek, OpenRouter, Gemini). PDF download fixed: bundled Noto Naskh Arabic font + proper Urdu shaping, and failures now show a message instead of silently doing nothing. Mandi rates are now LIVE from Punjab AMIS (amis.pk) with source + date shown; if live data is unavailable the AI estimate is clearly labelled as an estimate. Errors now say what is wrong (wrong key / rate limit / retired model) instead of one generic message. Voice transcription no longer crashes the app when it fails. Tests grew to 27 (`tests/test_kisan.py`).
 
