@@ -2,12 +2,26 @@ import streamlit as st
 from streamlit_mic_recorder import mic_recorder
 from config import t
 from ai_engine import get_ai_response, transcribe_audio
+from data.crop_encyclopedia import get_crop_info, list_crops
 from utils import play_audio, process_image_to_b64, download_pdf_button
 import base64
 
 def render_crop_doctor():
     st.subheader(t("crop_doctor"))
-    
+
+    # فصل گائیڈ — آف لائن، بغیر API key کے (data/crop_encyclopedia.py)
+    with st.expander(t("crop_guide")):
+        crop_choice = st.selectbox(t("crop_guide_pick"), list_crops())
+        info = get_crop_info(crop_choice)
+        if info:
+            st.markdown(
+                f"**{crop_choice}**\n\n"
+                f"- 🐛 **کیڑے / بیماری:** {info['pest']}\n"
+                f"- 💧 **پانی:** {info['water']}\n"
+                f"- 🧪 **یوریا:** {info['urea']}\n"
+                f"- 📅 **موسم:** {info['season']}"
+            )
+
     # پچھلی تشخیص
     if st.session_state.crop_history:
         st.write("---")
